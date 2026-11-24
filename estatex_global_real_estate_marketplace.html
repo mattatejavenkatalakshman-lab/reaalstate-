@@ -1,0 +1,2365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESTATEX | Find Your Place. Build Your Future.</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS for Interactive Geocoded Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#060c18',
+                            900: '#0a1428',
+                            800: '#112240',
+                            700: '#1d3557',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#d4af37',
+                            600: '#b48a1e',
+                        },
+                        emerald: {
+                            500: '#10b981',
+                            600: '#059669',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .glass-nav { background: rgba(10, 20, 40, 0.95); backdrop-filter: blur(12px); }
+        .hero-bg {
+            background: linear-gradient(to right, rgba(6, 12, 24, 0.88), rgba(10, 20, 40, 0.65)),
+                        url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2075&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(10, 20, 40, 0.12), 0 8px 10px -6px rgba(10, 20, 40, 0.08); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .leaflet-container { z-index: 10 !important; border-radius: 0.75rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.35s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP DEMO / ENVIRONMENT BANNER -->
+    <div class="bg-navy-950 text-slate-300 text-xs py-1.5 px-4 border-b border-navy-800 flex flex-wrap justify-between items-center gap-2">
+        <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span><strong>ESTATEX Live Interactive Sandbox</strong> • All records tagged <span class="text-amber-400 font-semibold">[DEMO LISTING]</span> are sample records stored in local state.</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <select id="currencySwitcher" onchange="app.setCurrency(this.value)" class="bg-navy-800 text-white border border-navy-700 rounded px-2 py-0.5 text-xs focus:outline-none">
+                <option value="USD">USD ($)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="AED">AED (د.إ)</option>
+            </select>
+            <span class="hidden sm:inline text-slate-400">24/7 Global Desk: +1 (800) 555-0199</span>
+        </div>
+    </div>
+
+    <!-- MAIN NAVIGATION BAR -->
+    <header class="glass-nav text-white sticky top-0 z-40 shadow-lg border-b border-navy-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Brand Logo -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="app.navigate('home')">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-gold-400 to-gold-600 flex items-center justify-center text-navy-950 font-bold text-xl shadow-md">
+                        E
+                    </div>
+                    <div>
+                        <span class="font-serif text-2xl font-bold tracking-wider text-white">ESTATE<span class="text-gold-500">X</span></span>
+                        <p class="text-[10px] tracking-widest uppercase text-slate-400 -mt-1">Find Your Place. Build Your Future.</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <nav class="hidden xl:flex items-center space-x-6 text-sm font-medium">
+                    <button onclick="app.navigate('home')" class="nav-link hover:text-gold-400 transition" data-page="home">Home</button>
+                    <button onclick="app.navigate('search', {listingType: 'Buy'})" class="nav-link hover:text-gold-400 transition" data-page="buy">Buy</button>
+                    <button onclick="app.navigate('search', {listingType: 'Rent'})" class="nav-link hover:text-gold-400 transition" data-page="rent">Rent</button>
+                    <button onclick="app.navigate('sell')" class="nav-link hover:text-gold-400 transition" data-page="sell">Sell</button>
+                    <button onclick="app.navigate('search', {category: 'Commercial'})" class="nav-link hover:text-gold-400 transition" data-page="commercial">Commercial</button>
+                    <button onclick="app.navigate('search', {isNewProject: true})" class="nav-link hover:text-gold-400 transition" data-page="projects">New Projects</button>
+                    <button onclick="app.navigate('agents')" class="nav-link hover:text-gold-400 transition" data-page="agents">Agents</button>
+                    <button onclick="app.navigate('about')" class="nav-link hover:text-gold-400 transition" data-page="about">About Us</button>
+                    <button onclick="app.navigate('contact')" class="nav-link hover:text-gold-400 transition" data-page="contact">Contact</button>
+                </nav>
+
+                <!-- Right Actions: Compare, Auth / Role Dashboard -->
+                <div class="hidden md:flex items-center gap-3">
+                    <button onclick="app.navigate('compare')" class="relative p-2 text-slate-300 hover:text-gold-400 transition" title="Compare Properties">
+                        <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                        <span id="compareBadge" class="hidden absolute -top-0.5 -right-0.5 bg-gold-500 text-navy-950 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    </button>
+
+                    <!-- Auth Buttons (Shown when logged out) -->
+                    <div id="authGuestControls" class="flex items-center gap-2">
+                        <button onclick="app.openAuthModal('login')" class="px-4 py-2 text-sm font-medium text-white hover:text-gold-400 transition">Login</button>
+                        <button onclick="app.openAuthModal('register')" class="px-4 py-2 text-sm font-semibold bg-gold-500 hover:bg-gold-400 text-navy-950 rounded-lg transition shadow">Sign Up</button>
+                    </div>
+
+                    <!-- User Profile Controls (Shown when logged in) -->
+                    <div id="authUserControls" class="hidden flex items-center gap-3">
+                        <button onclick="app.navigate('dashboard')" class="relative p-2 text-slate-300 hover:text-gold-400 transition" title="Notifications">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        </button>
+                        <div class="relative group">
+                            <button onclick="app.navigate('dashboard')" class="flex items-center gap-2 bg-navy-800 hover:bg-navy-700 border border-navy-700 px-3 py-1.5 rounded-lg transition">
+                                <div class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs" id="userAvatarInitial">U</div>
+                                <div class="text-left">
+                                    <p class="text-xs font-semibold text-white leading-tight" id="navUserName">User</p>
+                                    <p class="text-[10px] text-gold-400 uppercase tracking-wider" id="navUserRole">Buyer</p>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                            </button>
+                            <!-- Dropdown -->
+                            <div class="hidden group-hover:block absolute right-0 mt-1 w-52 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                                <button onclick="app.navigate('dashboard')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-navy-800"></i> My Dashboard
+                                </button>
+                                <button onclick="app.navigate('sell')" class="w-full text-left px-4 py-2 text-sm hover:bg-slate-100 flex items-center gap-2">
+                                    <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> Post a Property
+                                </button>
+                                <div class="border-t border-slate-100 my-1"></div>
+                                <button onclick="app.logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Hamburger Button -->
+                <div class="xl:hidden flex items-center gap-2">
+                    <button onclick="app.navigate('compare')" class="relative p-2 text-slate-300 md:hidden">
+                        <i data-lucide="arrow-left-right" class="w-5 h-5"></i>
+                        <span id="compareBadgeMobile" class="hidden absolute top-0 right-0 bg-gold-500 text-navy-950 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    </button>
+                    <button onclick="app.toggleMobileMenu()" class="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-navy-800">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Drawer Menu -->
+        <div id="mobileMenu" class="hidden xl:hidden bg-navy-900 border-t border-navy-800 px-4 pt-3 pb-6 space-y-2">
+            <button onclick="app.navigate('home'); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Home</button>
+            <button onclick="app.navigate('search', {listingType: 'Buy'}); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Buy</button>
+            <button onclick="app.navigate('search', {listingType: 'Rent'}); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Rent</button>
+            <button onclick="app.navigate('sell'); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Sell Property</button>
+            <button onclick="app.navigate('search', {category: 'Commercial'}); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Commercial</button>
+            <button onclick="app.navigate('search', {isNewProject: true}); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">New Projects</button>
+            <button onclick="app.navigate('agents'); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Agents</button>
+            <button onclick="app.navigate('about'); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">About Us</button>
+            <button onclick="app.navigate('contact'); app.toggleMobileMenu()" class="block w-full text-left py-2 px-3 rounded-lg hover:bg-navy-800">Contact</button>
+            <div class="pt-3 border-t border-navy-800 flex gap-2" id="mobileAuthSection">
+                <button onclick="app.openAuthModal('login'); app.toggleMobileMenu()" class="flex-1 py-2 text-center border border-slate-600 rounded-lg">Login</button>
+                <button onclick="app.openAuthModal('register'); app.toggleMobileMenu()" class="flex-1 py-2 text-center bg-gold-500 text-navy-950 font-semibold rounded-lg">Sign Up</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DYNAMIC VIEWPORT -->
+    <main id="mainViewport" class="flex-grow"></main>
+
+    <!-- FLOATING AI REAL-ESTATE ASSISTANT WIDGET -->
+    <div class="fixed bottom-6 right-6 z-40">
+        <!-- Chat Window -->
+        <div id="aiChatWindow" class="hidden mb-3 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-fade-in" style="height: 460px;">
+            <div class="bg-navy-900 text-white p-4 flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-gold-500 text-navy-950 flex items-center justify-center font-bold">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm">ESTATEX AI Advisor</h4>
+                        <p class="text-[11px] text-emerald-400">Connected to Live Property DB</p>
+                    </div>
+                </div>
+                <button onclick="app.toggleAIChat()" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="aiChatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50 text-sm custom-scrollbar">
+                <div class="bg-white p-3 rounded-xl rounded-tl-none shadow-sm border border-slate-100 text-slate-700">
+                    Hello! I am your ESTATEX AI Real-Estate Assistant. Ask me to find homes within a budget, compare properties, or suggest locations in India & globally!
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        <button onclick="app.sendAIPrompt('Show villas under $1.5M')" class="text-xs bg-slate-100 hover:bg-navy-900 hover:text-white px-2.5 py-1 rounded-full transition">Villas under $1.5M</button>
+                        <button onclick="app.sendAIPrompt('Properties in Bengaluru')" class="text-xs bg-slate-100 hover:bg-navy-900 hover:text-white px-2.5 py-1 rounded-full transition">Homes in Bengaluru</button>
+                        <button onclick="app.sendAIPrompt('Compare top apartments')" class="text-xs bg-slate-100 hover:bg-navy-900 hover:text-white px-2.5 py-1 rounded-full transition">Compare Apartments</button>
+                    </div>
+                </div>
+            </div>
+            <form onsubmit="app.handleAIChatSubmit(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+                <input type="text" id="aiChatInput" placeholder="Ask about properties, budgets, locations..." class="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:border-navy-800" required>
+                <button type="submit" class="bg-navy-900 hover:bg-navy-800 text-white px-3.5 py-2 rounded-lg transition">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Toggle Button -->
+        <button onclick="app.toggleAIChat()" class="ml-auto flex items-center gap-2 bg-navy-900 hover:bg-navy-800 text-white px-4 py-3.5 rounded-full shadow-xl border border-gold-500/40 transition transform hover:scale-105">
+            <i data-lucide="bot" class="w-5 h-5 text-gold-400"></i>
+            <span class="text-sm font-semibold pr-1">Ask AI Advisor</span>
+        </button>
+    </div>
+
+    <!-- AUTHENTICATION MODAL (LOGIN / REGISTER / FORGOT PASSWORD / DEMO ROLES) -->
+    <div id="authModal" class="hidden fixed inset-0 z-50 bg-navy-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative animate-fade-in">
+            <button onclick="app.closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <div class="text-center mb-6">
+                <span class="font-serif text-2xl font-bold text-navy-900">ESTATE<span class="text-gold-500">X</span></span>
+                <h3 id="authModalTitle" class="text-xl font-bold text-slate-900 mt-2">Welcome Back</h3>
+                <p id="authModalSubtitle" class="text-sm text-slate-500">Sign in to access your saved properties & dashboards</p>
+            </div>
+
+            <!-- Instant Role Switcher for Testing RBAC -->
+            <div class="mb-5 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-2">Instant Sandbox Role Login (RBAC Test):</p>
+                <div class="grid grid-cols-2 gap-1.5 text-xs">
+                    <button type="button" onclick="app.quickLogin('buyer@estatex.com')" class="py-1.5 px-2 bg-white border border-slate-200 hover:border-navy-800 rounded font-medium text-left">👤 Buyer / Tenant</button>
+                    <button type="button" onclick="app.quickLogin('owner@estatex.com')" class="py-1.5 px-2 bg-white border border-slate-200 hover:border-navy-800 rounded font-medium text-left">🏠 Property Owner</button>
+                    <button type="button" onclick="app.quickLogin('agent@estatex.com')" class="py-1.5 px-2 bg-white border border-slate-200 hover:border-navy-800 rounded font-medium text-left">💼 Real Estate Agent</button>
+                    <button type="button" onclick="app.quickLogin('admin@estatex.com')" class="py-1.5 px-2 bg-navy-900 text-gold-400 rounded font-medium text-left">🛡️ Administrator</button>
+                </div>
+            </div>
+
+            <form id="authForm" onsubmit="app.handleAuthSubmit(event)" class="space-y-4">
+                <div id="registerNameField" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                    <input type="text" id="authName" class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-navy-800" placeholder="e.g. Aarav Sharma">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="authEmail" required class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-navy-800" placeholder="you@example.com">
+                </div>
+                <div id="authPasswordField">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-semibold text-slate-700">Password</label>
+                        <button type="button" onclick="app.switchAuthMode('forgot')" class="text-xs text-navy-700 hover:underline">Forgot password?</button>
+                    </div>
+                    <input type="password" id="authPassword" class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-navy-800" placeholder="••••••••">
+                </div>
+                <div id="registerRoleField" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Account Role</label>
+                    <select id="authRole" class="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-navy-800">
+                        <option value="Buyer">Buyer</option>
+                        <option value="Tenant">Tenant</option>
+                        <option value="Property Owner">Property Owner</option>
+                        <option value="Real Estate Agent">Real Estate Agent</option>
+                    </select>
+                </div>
+                <button type="submit" id="authSubmitBtn" class="w-full bg-navy-900 hover:bg-navy-800 text-white font-semibold py-2.5 rounded-lg transition shadow">Sign In</button>
+            </form>
+
+            <div class="mt-5 text-center text-xs text-slate-500" id="authSwitchText">
+                Don't have an account? <button onclick="app.switchAuthMode('register')" class="text-navy-900 font-bold hover:underline">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPOINTMENT / BOOKING & PAYMENT MODAL -->
+    <div id="bookingModal" class="hidden fixed inset-0 z-50 bg-navy-950/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative animate-fade-in">
+            <button onclick="app.closeBookingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h3 class="text-xl font-bold text-navy-900">Schedule Property Visit</h3>
+            <p class="text-xs text-slate-500 mt-1" id="bookingPropTitle">Property Title</p>
+
+            <form onsubmit="app.handleBookingSubmit(event)" class="mt-5 space-y-4">
+                <input type="hidden" id="bookingPropId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Preferred Date</label>
+                        <input type="date" id="bookingDate" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Preferred Time</label>
+                        <select id="bookingTime" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                            <option>10:00 AM</option>
+                            <option>12:30 PM</option>
+                            <option>03:00 PM</option>
+                            <option>05:30 PM</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Visit Type</label>
+                    <select id="bookingVisitType" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="In-Person Tour">In-Person Guided Tour (Free)</option>
+                        <option value="Live Video Walkthrough">Live Video Walkthrough (Free)</option>
+                        <option value="VIP Priority Chauffeur Inspection">VIP Priority Inspection ($25 Refundable Token)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Notes for Agent / Owner</label>
+                    <textarea id="bookingNotes" rows="2" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Any specific questions about parking, neighborhood, or documents..."></textarea>
+                </div>
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    <strong>Security & Privacy Notice:</strong> Your phone number remains masked until you authorize direct contact. Card details are never stored on ESTATEX servers.
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg transition shadow">Confirm Visit Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed top-24 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- GLOBAL FOOTER -->
+    <footer class="bg-navy-950 text-slate-400 border-t border-navy-800 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-8 h-8 rounded bg-gold-500 text-navy-950 flex items-center justify-center font-bold">E</div>
+                        <span class="font-serif text-xl font-bold text-white">ESTATE<span class="text-gold-500">X</span></span>
+                    </div>
+                    <p class="text-sm leading-relaxed mb-4">Global Real Estate Marketplace & Property Management Platform connecting verified buyers, tenants, owners, and accredited agents across India and international hubs.</p>
+                    <p class="text-xs text-gold-400 font-semibold">Find Your Place. Build Your Future.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Marketplace</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><button onclick="app.navigate('search', {listingType: 'Buy'})" class="hover:text-gold-400">Buy Residential</button></li>
+                        <li><button onclick="app.navigate('search', {listingType: 'Rent'})" class="hover:text-gold-400">Rent Apartments & Villas</button></li>
+                        <li><button onclick="app.navigate('search', {category: 'Commercial'})" class="hover:text-gold-400">Commercial & Office Spaces</button></li>
+                        <li><button onclick="app.navigate('search', {category: 'Plots'})" class="hover:text-gold-400">Land & Agricultural Plots</button></li>
+                        <li><button onclick="app.navigate('search', {isNewProject: true})" class="hover:text-gold-400">New Construction Projects</button></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Platform</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><button onclick="app.navigate('sell')" class="hover:text-gold-400">List Your Property</button></li>
+                        <li><button onclick="app.navigate('agents')" class="hover:text-gold-400">Verified Agent Directory</button></li>
+                        <li><button onclick="app.navigate('compare')" class="hover:text-gold-400">Property Comparison Tool</button></li>
+                        <li><button onclick="app.navigate('about')" class="hover:text-gold-400">Verification & Trust Policy</button></li>
+                        <li><button onclick="app.navigate('contact')" class="hover:text-gold-400">Global Support & Offices</button></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Global Hubs</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li>🇮🇳 Bengaluru • Mumbai • Hyderabad • Delhi NCR</li>
+                        <li>🇦🇪 Dubai Marina & Downtown Dubai</li>
+                        <li>🇬🇧 London • Canary Wharf & Kensington</li>
+                        <li>🇺🇸 New York • Austin • San Francisco</li>
+                        <li>🇸🇬 Singapore • Marina Bay</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-navy-800 mt-10 pt-6 flex flex-col sm:flex-row justify-between items-center text-xs gap-4">
+                <p>© 2026 ESTATEX Global Real Estate Technologies. All rights reserved.</p>
+                <p class="text-slate-500">Disclaimer: Demo listings are clearly marked [DEMO LISTING]. Estimated valuations are AI-generated guidance and not formal appraisals.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- APPLICATION ENGINE (STATE, DATABASE SEED, ROUTING, SEARCH, RBAC, MAPS, AI) -->
+    <script>
+        const INITIAL_PROPERTIES = [
+            {
+                id: "EX-IN-1001",
+                title: "Skyline Crest 4BHK Luxury Sky Villa",
+                listingType: "Buy",
+                category: "Villas",
+                priceUSD: 1450000,
+                city: "Bengaluru",
+                state: "Karnataka",
+                country: "India",
+                locality: "Indiranagar 100ft Road",
+                address: "42, 100 Feet Road, HAL 2nd Stage, Indiranagar, Bengaluru 560038",
+                lat: 12.9784,
+                lng: 77.6408,
+                sizeSqFt: 4200,
+                bedrooms: 4,
+                bathrooms: 5,
+                furnishing: "Fully Furnished",
+                parking: "3 Covered EV Bays",
+                floor: "18th & 19th Duplex",
+                ageYears: 1,
+                verified: true,
+                isDemo: true,
+                isFeatured: true,
+                isTrending: true,
+                isNewProject: false,
+                views: 1842,
+                listedDate: "2026-11-10",
+                status: "Active",
+                agentId: "AG-01",
+                description: "Architectural duplex sky villa in the heart of Indiranagar featuring private plunge pool, Italian marble flooring, double-height living room, smart home automation, and panoramic city views.",
+                amenities: ["Swimming Pool", "Private Elevator", "24/7 Security", "EV Charging", "Gymnasium", "Clubhouse", "Power Backup"],
+                nearby: { school: "National Public School (0.8 km)", hospital: "Manipal Hospital (1.4 km)", transport: "Indiranagar Metro Station (0.5 km)", airport: "Kempegowda Intl Airport (36 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-AE-1002",
+                title: "Marina Royal Waterfront Penthouse",
+                listingType: "Buy",
+                category: "Apartments",
+                priceUSD: 2850000,
+                city: "Dubai",
+                state: "Dubai",
+                country: "UAE",
+                locality: "Dubai Marina",
+                address: "Marina Promenade, Tower B, Dubai Marina, Dubai, UAE",
+                lat: 25.0772,
+                lng: 55.1332,
+                sizeSqFt: 5100,
+                bedrooms: 5,
+                bathrooms: 6,
+                furnishing: "Fully Furnished",
+                parking: "4 Underground Spaces",
+                floor: "42nd Penthouse",
+                ageYears: 0,
+                verified: true,
+                isDemo: true,
+                isFeatured: true,
+                isTrending: true,
+                isNewProject: true,
+                views: 2490,
+                listedDate: "2026-11-18",
+                status: "Active",
+                agentId: "AG-02",
+                description: "Full-floor waterfront penthouse overlooking yacht berths and the Arabian Gulf. Includes bespoke designer kitchen, wrap-around terrace, staff quarters, and private marina access.",
+                amenities: ["Infinity Pool", "Concierge", "Private Beach Access", "Valet Parking", "Spa & Sauna", "Smart Home"],
+                nearby: { school: "Emirates International School (2.1 km)", hospital: "Saudi German Hospital (3.0 km)", transport: "DMCC Metro & Tram (0.4 km)", airport: "Dubai Intl Airport DXB (31 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-IN-1003",
+                title: "BKC One Grade-A Tech Office Floor",
+                listingType: "Rent",
+                category: "Office spaces",
+                priceUSD: 18500,
+                city: "Mumbai",
+                state: "Maharashtra",
+                country: "India",
+                locality: "Bandra Kurla Complex",
+                address: "Plot C-66, G Block, Bandra Kurla Complex, Mumbai 400051",
+                lat: 19.0674,
+                lng: 72.8677,
+                sizeSqFt: 8500,
+                bedrooms: 0,
+                bathrooms: 4,
+                furnishing: "Warm Shell",
+                parking: "12 Reserved Car Parks",
+                floor: "14th Floor",
+                ageYears: 2,
+                verified: true,
+                isDemo: true,
+                isFeatured: true,
+                isTrending: false,
+                isNewProject: false,
+                views: 960,
+                listedDate: "2026-11-14",
+                status: "Active",
+                agentId: "AG-01",
+                description: "LEED Platinum certified Grade-A commercial office space in Mumbai's premier financial district. High-speed destination-controlled elevators, 100% DG backup, and central HVAC.",
+                amenities: ["Central AC", "100% Power Backup", "Cafeteria", "24/7 Security", "Conference Rooms", "Fire Safety"],
+                nearby: { school: "Dhirubhai Ambani Intl School (0.6 km)", hospital: "Asian Heart Institute (1.1 km)", transport: "BKC Metro Line 3 (0.3 km)", airport: "Chhatrapati Shivaji Intl Airport (7.5 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-US-1004",
+                title: "Westlake Hills Modern Architectural Villa",
+                listingType: "Buy",
+                category: "Independent houses",
+                priceUSD: 2150000,
+                city: "Austin",
+                state: "Texas",
+                country: "USA",
+                locality: "Westlake Hills",
+                address: "1408 Barton Creek Blvd, Austin, TX 78746",
+                lat: 30.2912,
+                lng: -97.8105,
+                sizeSqFt: 4650,
+                bedrooms: 5,
+                bathrooms: 4,
+                furnishing: "Semi-Furnished",
+                parking: "3-Car Garage",
+                floor: "2 Stories",
+                ageYears: 3,
+                verified: true,
+                isDemo: true,
+                isFeatured: false,
+                isTrending: true,
+                isNewProject: false,
+                views: 1520,
+                listedDate: "2026-11-12",
+                status: "Active",
+                agentId: "AG-03",
+                description: "Contemporary limestone and glass residence nestled in the greenbelt of Westlake Hills. Features white oak floors, chef's kitchen, outdoor summer kitchen, and resort pool.",
+                amenities: ["Swimming Pool", "Garden", "Smart Home", "Solar Panels", "Home Office"],
+                nearby: { school: "Eanes Elementary School (1.5 km)", hospital: "St. David's Medical Center (6.2 km)", transport: "CapMetro Rapid Hub (3.4 km)", airport: "Austin-Bergstrom Intl Airport (19 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1600573472550-8090b5e0745e?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-IN-1005",
+                title: "Gachibowli Financial District 3BHK Apartment",
+                listingType: "Rent",
+                category: "Apartments",
+                priceUSD: 1450,
+                city: "Hyderabad",
+                state: "Telangana",
+                country: "India",
+                locality: "Financial District, Nanakramguda",
+                address: "Tower 4, WaveRock Avenue, Financial District, Hyderabad 500032",
+                lat: 17.4169,
+                lng: 78.3426,
+                sizeSqFt: 2150,
+                bedrooms: 3,
+                bathrooms: 3,
+                furnishing: "Fully Furnished",
+                parking: "2 Covered Slots",
+                floor: "11th Floor",
+                ageYears: 2,
+                verified: true,
+                isDemo: true,
+                isFeatured: false,
+                isTrending: true,
+                isNewProject: false,
+                views: 1120,
+                listedDate: "2026-11-19",
+                status: "Active",
+                agentId: "AG-01",
+                description: "Move-in ready 3BHK apartment inside a gated community walking distance from major IT campuses. Includes modular kitchen, split ACs, clubhouse membership, and landscaped jogging tracks.",
+                amenities: ["Clubhouse", "Swimming Pool", "Gymnasium", "24/7 Security", "Children Play Area", "Power Backup"],
+                nearby: { school: "Oakridge International School (2.2 km)", hospital: "Continental Hospitals (1.1 km)", transport: "Raidurg Metro Station (5.5 km)", airport: "Rajiv Gandhi Intl Airport (28 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-UK-1006",
+                title: "Kensington Heritage Georgian Townhouse",
+                listingType: "Buy",
+                category: "Independent houses",
+                priceUSD: 3600000,
+                city: "London",
+                state: "Greater London",
+                country: "United Kingdom",
+                locality: "South Kensington",
+                address: "18 Queensberry Place, South Kensington, London SW7 2EA",
+                lat: 51.4934,
+                lng: -0.1782,
+                sizeSqFt: 3400,
+                bedrooms: 4,
+                bathrooms: 4,
+                furnishing: "Semi-Furnished",
+                parking: "Resident Permit Parking",
+                floor: "4 Levels",
+                ageYears: 45,
+                verified: true,
+                isDemo: true,
+                isFeatured: true,
+                isTrending: false,
+                isNewProject: false,
+                views: 1340,
+                listedDate: "2026-11-05",
+                status: "Active",
+                agentId: "AG-02",
+                description: "Meticulously restored Grade-II listed stucco-fronted townhouse moments from Hyde Park and Natural History Museum. Combines period cornicing with contemporary underfloor heating and courtyard garden.",
+                amenities: ["Private Garden", "Wine Cellar", "Smart Security", "Fireplace"],
+                nearby: { school: "Lycee Francais Charles de Gaulle (0.3 km)", hospital: "Chelsea and Westminster Hospital (1.6 km)", transport: "South Kensington Underground (0.2 km)", airport: "London Heathrow Airport (22 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-IN-1007",
+                title: "Emerald Enclave RERA Approved Residential Plot",
+                listingType: "Buy",
+                category: "Plots",
+                priceUSD: 240000,
+                city: "Amaravati / Vijayawada",
+                state: "Andhra Pradesh",
+                country: "India",
+                locality: "Gannavaram - Nidamanuru Corridor",
+                address: "Sector 4, Emerald Green Township, NH-16 Corridor, Vijayawada 521104",
+                lat: 16.5356,
+                lng: 80.7289,
+                sizeSqFt: 3600,
+                bedrooms: 0,
+                bathrooms: 0,
+                furnishing: "Unfurnished",
+                parking: "Open Plot",
+                floor: "Ground",
+                ageYears: 0,
+                verified: true,
+                isDemo: true,
+                isFeatured: false,
+                isTrending: true,
+                isNewProject: true,
+                views: 890,
+                listedDate: "2026-11-21",
+                status: "Active",
+                agentId: "AG-01",
+                description: "East-facing 400 sq. yards CRDA & RERA approved residential plot in a gated avenue with 40ft blacktop roads, underground drainage, avenue plantation, and immediate registration.",
+                amenities: ["Gated Community", "24/7 Security", "Landscaped Parks", "Underground Electricity"],
+                nearby: { school: "Delhi Public School Vijayawada (2.5 km)", hospital: "Pinnamaneni Siddhartha Hospital (4.0 km)", transport: "Gannavaram Railway Station (3.8 km)", airport: "Vijayawada International Airport (5.2 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+                ]
+            },
+            {
+                id: "EX-IN-1008",
+                title: "Sector 62 Affordable Modern 2BHK Home",
+                listingType: "Buy",
+                category: "Apartments",
+                priceUSD: 115000,
+                city: "Noida",
+                state: "Uttar Pradesh",
+                country: "India",
+                locality: "Sector 62",
+                address: "Tower C, GreenView Residency, Sector 62, Noida 201309",
+                lat: 28.6271,
+                lng: 77.3649,
+                sizeSqFt: 1180,
+                bedrooms: 2,
+                bathrooms: 2,
+                furnishing: "Semi-Furnished",
+                parking: "1 Covered Slot",
+                floor: "7th Floor",
+                ageYears: 4,
+                verified: true,
+                isDemo: true,
+                isFeatured: false,
+                isTrending: false,
+                isNewProject: false,
+                views: 740,
+                listedDate: "2026-11-16",
+                status: "Active",
+                agentId: "AG-03",
+                description: "Well-ventilated park-facing 2BHK apartment ideal for families and IT professionals. Walking distance to Electronic City Metro Station and major corporate parks.",
+                amenities: ["24/7 Security", "Gymnasium", "Power Backup", "Children Play Area"],
+                nearby: { school: "Indus Valley Public School (0.9 km)", hospital: "Fortis Hospital Sector 62 (1.3 km)", transport: "Noida Electronic City Metro (0.6 km)", airport: "Indira Gandhi Intl Airport (34 km)" },
+                images: [
+                    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
+                ]
+            }
+        ];
+
+        const INITIAL_AGENTS = [
+            { id: "AG-01", name: "Rohan Kulkarni", title: "Senior Luxury & Commercial Advisor", region: "India (Bengaluru, Mumbai, Hyderabad)", verified: true, rating: 4.9, dealsClosed: 142, license: "RERA/KA/1251/446/AG/2109", email: "rohan.k@estatex.global", phone: "+91 98450 XXXXX", avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80" },
+            { id: "AG-02", name: "Elena Al-Mansoor", title: "Director of International Prime Estates", region: "UAE & United Kingdom (Dubai, London)", verified: true, rating: 5.0, dealsClosed: 98, license: "RERA-DXB-BRN-48291", email: "elena.m@estatex.global", phone: "+971 50 412 XXXX", avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80" },
+            { id: "AG-03", name: "Marcus Vance", title: "Residential & Investment Specialist", region: "North America & NCR (Austin, New York, Noida)", verified: true, rating: 4.8, dealsClosed: 115, license: "TREC-749201", email: "marcus.v@estatex.global", phone: "+1 512 890 XXXX", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80" }
+        ];
+
+        const DEMO_USERS = {
+            "buyer@estatex.com": { id: "U-101", name: "Ananya Verma", email: "buyer@estatex.com", role: "Buyer", verified: true },
+            "owner@estatex.com": { id: "U-102", name: "Vikramaditya Rao", email: "owner@estatex.com", role: "Property Owner", verified: true },
+            "agent@estatex.com": { id: "AG-01", name: "Rohan Kulkarni", email: "agent@estatex.com", role: "Real Estate Agent", verified: true },
+            "admin@estatex.com": { id: "U-999", name: "ESTATEX Global Admin", email: "admin@estatex.com", role: "Administrator", verified: true }
+        };
+
+        class EstatexApp {
+            constructor() {
+                this.state = {
+                    currentPage: 'home',
+                    currency: 'USD',
+                    rates: { USD: { symbol: '$', rate: 1 }, INR: { symbol: '₹', rate: 84 }, EUR: { symbol: '€', rate: 0.92 }, AED: { symbol: 'AED ', rate: 3.67 } },
+                    user: JSON.parse(localStorage.getItem('estatex_user')) || null,
+                    properties: JSON.parse(localStorage.getItem('estatex_properties')) || INITIAL_PROPERTIES,
+                    agents: INITIAL_AGENTS,
+                    favorites: JSON.parse(localStorage.getItem('estatex_favorites')) || ["EX-IN-1001", "EX-AE-1002"],
+                    compareList: JSON.parse(localStorage.getItem('estatex_compare')) || ["EX-IN-1001", "EX-US-1004"],
+                    recentlyViewed: JSON.parse(localStorage.getItem('estatex_recent')) || ["EX-IN-1001"],
+                    searchHistory: JSON.parse(localStorage.getItem('estatex_search_history')) || ["Bengaluru", "Dubai Marina"],
+                    appointments: JSON.parse(localStorage.getItem('estatex_appointments')) || [
+                        { id: "APT-501", propId: "EX-IN-1001", userId: "U-101", userName: "Ananya Verma", date: "2026-11-28", time: "10:00 AM", type: "In-Person Tour", status: "Confirmed", paymentStatus: "Free" }
+                    ],
+                    messages: JSON.parse(localStorage.getItem('estatex_messages')) || [
+                        { id: "MSG-1", propId: "EX-IN-1001", sender: "Ananya Verma", recipient: "Rohan Kulkarni", text: "Hi Rohan, is the private plunge pool heated and are OC/CC documents available?", time: "10:15 AM" },
+                        { id: "MSG-2", propId: "EX-IN-1001", sender: "Rohan Kulkarni", recipient: "Ananya Verma", text: "Hello Ananya! Yes, both OC and CC are verified and available for inspection during your visit.", time: "10:22 AM" }
+                    ],
+                    reports: JSON.parse(localStorage.getItem('estatex_reports')) || [],
+                    filters: {
+                        keyword: '',
+                        listingType: '',
+                        category: '',
+                        country: '',
+                        minPrice: '',
+                        maxPrice: '',
+                        bedrooms: '',
+                        bathrooms: '',
+                        furnishing: '',
+                        verifiedOnly: false,
+                        isNewProject: false,
+                        sortBy: 'newest',
+                        viewMode: 'grid' // 'grid' or 'map'
+                    },
+                    selectedPropertyId: null,
+                    authMode: 'login',
+                    dashboardTab: 'overview'
+                };
+                this.activeMap = null;
+            }
+
+            saveState() {
+                localStorage.setItem('estatex_user', JSON.stringify(this.state.user));
+                localStorage.setItem('estatex_properties', JSON.stringify(this.state.properties));
+                localStorage.setItem('estatex_favorites', JSON.stringify(this.state.favorites));
+                localStorage.setItem('estatex_compare', JSON.stringify(this.state.compareList));
+                localStorage.setItem('estatex_recent', JSON.stringify(this.state.recentlyViewed));
+                localStorage.setItem('estatex_search_history', JSON.stringify(this.state.searchHistory));
+                localStorage.setItem('estatex_appointments', JSON.stringify(this.state.appointments));
+                localStorage.setItem('estatex_messages', JSON.stringify(this.state.messages));
+                localStorage.setItem('estatex_reports', JSON.stringify(this.state.reports));
+                this.updateHeaderUI();
+            }
+
+            init() {
+                this.updateHeaderUI();
+                this.navigate('home');
+            }
+
+            formatPrice(priceUSD, listingType = 'Buy') {
+                const { symbol, rate } = this.state.rates[this.state.currency];
+                const val = Math.round(priceUSD * rate);
+                let formatted = '';
+                if (this.state.currency === 'INR') {
+                    if (val >= 10000000) formatted = `${symbol}${(val / 10000000).toFixed(2)} Cr`;
+                    else if (val >= 100000) formatted = `${symbol}${(val / 100000).toFixed(2)} L`;
+                    else formatted = `${symbol}${val.toLocaleString('en-IN')}`;
+                } else {
+                    formatted = `${symbol}${val.toLocaleString('en-US')}`;
+                }
+                return listingType === 'Rent' ? `${formatted}/mo` : formatted;
+            }
+
+            setCurrency(curr) {
+                this.state.currency = curr;
+                this.render();
+                this.showToast(`Currency updated to ${curr}`);
+            }
+
+            showToast(msg, type = 'success') {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                const bg = type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-amber-600' : 'bg-navy-900 border border-gold-500/50';
+                toast.className = `${bg} text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium flex items-center gap-2.5 pointer-events-auto animate-fade-in`;
+                toast.innerHTML = `<i data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle'}" class="w-4 h-4 text-gold-400"></i><span>${msg}</span>`;
+                container.appendChild(toast);
+                lucide.createIcons();
+                setTimeout(() => toast.remove(), 3500);
+            }
+
+            updateHeaderUI() {
+                const count = this.state.compareList.length;
+                ['compareBadge', 'compareBadgeMobile'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.textContent = count;
+                        el.classList.toggle('hidden', count === 0);
+                    }
+                });
+
+                const guestCtrl = document.getElementById('authGuestControls');
+                const userCtrl = document.getElementById('authUserControls');
+                const mobileAuth = document.getElementById('mobileAuthSection');
+
+                if (this.state.user) {
+                    guestCtrl.classList.add('hidden');
+                    userCtrl.classList.remove('hidden');
+                    document.getElementById('navUserName').textContent = this.state.user.name;
+                    document.getElementById('navUserRole').textContent = this.state.user.role;
+                    document.getElementById('userAvatarInitial').textContent = this.state.user.name.charAt(0).toUpperCase();
+                    mobileAuth.innerHTML = `
+                        <button onclick="app.navigate('dashboard'); app.toggleMobileMenu()" class="flex-1 py-2 text-center bg-gold-500 text-navy-950 font-semibold rounded-lg">Dashboard (${this.state.user.role})</button>
+                        <button onclick="app.logout(); app.toggleMobileMenu()" class="py-2 px-4 text-center border border-red-500 text-red-400 rounded-lg">Logout</button>
+                    `;
+                } else {
+                    guestCtrl.classList.remove('hidden');
+                    userCtrl.classList.add('hidden');
+                    mobileAuth.innerHTML = `
+                        <button onclick="app.openAuthModal('login'); app.toggleMobileMenu()" class="flex-1 py-2 text-center border border-slate-600 rounded-lg">Login</button>
+                        <button onclick="app.openAuthModal('register'); app.toggleMobileMenu()" class="flex-1 py-2 text-center bg-gold-500 text-navy-950 font-semibold rounded-lg">Sign Up</button>
+                    `;
+                }
+            }
+
+            toggleMobileMenu() {
+                document.getElementById('mobileMenu').classList.toggle('hidden');
+            }
+
+            // NAVIGATION ROUTER
+            navigate(page, params = {}) {
+                this.state.currentPage = page;
+                if (page === 'search') {
+                    this.state.filters = {
+                        ...this.state.filters,
+                        keyword: params.keyword !== undefined ? params.keyword : '',
+                        listingType: params.listingType !== undefined ? params.listingType : '',
+                        category: params.category !== undefined ? params.category : '',
+                        country: params.country !== undefined ? params.country : '',
+                        minPrice: params.minPrice !== undefined ? params.minPrice : '',
+                        maxPrice: params.maxPrice !== undefined ? params.maxPrice : '',
+                        isNewProject: params.isNewProject || false
+                    };
+                    if (params.keyword && !this.state.searchHistory.includes(params.keyword)) {
+                        this.state.searchHistory.unshift(params.keyword);
+                        this.state.searchHistory = this.state.searchHistory.slice(0, 6);
+                        this.saveState();
+                    }
+                }
+                if (page === 'details' && params.id) {
+                    this.state.selectedPropertyId = params.id;
+                    const prop = this.state.properties.find(p => p.id === params.id);
+                    if (prop) {
+                        prop.views = (prop.views || 0) + 1;
+                        this.state.recentlyViewed = [params.id, ...this.state.recentlyViewed.filter(x => x !== params.id)].slice(0, 6);
+                        this.saveState();
+                    }
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                this.render();
+            }
+
+            // AUTHENTICATION & RBAC
+            openAuthModal(mode = 'login') {
+                this.switchAuthMode(mode);
+                document.getElementById('authModal').classList.remove('hidden');
+            }
+            closeAuthModal() {
+                document.getElementById('authModal').classList.add('hidden');
+            }
+            switchAuthMode(mode) {
+                this.state.authMode = mode;
+                const title = document.getElementById('authModalTitle');
+                const sub = document.getElementById('authModalSubtitle');
+                const nameF = document.getElementById('registerNameField');
+                const roleF = document.getElementById('registerRoleField');
+                const passF = document.getElementById('authPasswordField');
+                const btn = document.getElementById('authSubmitBtn');
+                const switchTxt = document.getElementById('authSwitchText');
+
+                if (mode === 'register') {
+                    title.textContent = 'Create Your ESTATEX Account';
+                    sub.textContent = 'Join buyers, owners & verified real-estate advisors globally';
+                    nameF.classList.remove('hidden');
+                    roleF.classList.remove('hidden');
+                    passF.classList.remove('hidden');
+                    btn.textContent = 'Register Account';
+                    switchTxt.innerHTML = `Already have an account? <button onclick="app.switchAuthMode('login')" class="text-navy-900 font-bold hover:underline">Sign In</button>`;
+                } else if (mode === 'forgot') {
+                    title.textContent = 'Reset Password';
+                    sub.textContent = 'Enter your registered email to receive a secure reset link';
+                    nameF.classList.add('hidden');
+                    roleF.classList.add('hidden');
+                    passF.classList.add('hidden');
+                    btn.textContent = 'Send Reset Link';
+                    switchTxt.innerHTML = `Remembered your password? <button onclick="app.switchAuthMode('login')" class="text-navy-900 font-bold hover:underline">Back to Login</button>`;
+                } else {
+                    title.textContent = 'Welcome Back';
+                    sub.textContent = 'Sign in to access your saved properties & dashboards';
+                    nameF.classList.add('hidden');
+                    roleF.classList.add('hidden');
+                    passF.classList.remove('hidden');
+                    btn.textContent = 'Sign In';
+                    switchTxt.innerHTML = `Don't have an account? <button onclick="app.switchAuthMode('register')" class="text-navy-900 font-bold hover:underline">Create Account</button>`;
+                }
+            }
+
+            quickLogin(email) {
+                const user = DEMO_USERS[email];
+                if (user) {
+                    this.state.user = { ...user };
+                    this.saveState();
+                    this.closeAuthModal();
+                    this.showToast(`Signed in as ${user.name} (${user.role})`);
+                    this.navigate('dashboard');
+                }
+            }
+
+            handleAuthSubmit(e) {
+                e.preventDefault();
+                const email = document.getElementById('authEmail').value.trim().toLowerCase();
+                if (this.state.authMode === 'forgot') {
+                    this.showToast(`Password reset token dispatched to ${email}`);
+                    this.switchAuthMode('login');
+                    return;
+                }
+                if (this.state.authMode === 'register') {
+                    const name = document.getElementById('authName').value.trim() || 'ESTATEX Member';
+                    const role = document.getElementById('authRole').value;
+                    this.state.user = { id: 'U-' + Date.now().toString().slice(-4), name, email, role, verified: true };
+                    this.saveState();
+                    this.closeAuthModal();
+                    this.showToast(`Welcome ${name}! Account registered as ${role}.`);
+                    this.navigate('dashboard');
+                } else {
+                    if (DEMO_USERS[email]) {
+                        this.quickLogin(email);
+                    } else {
+                        this.state.user = { id: 'U-' + Date.now().toString().slice(-4), name: email.split('@')[0], email, role: 'Buyer', verified: true };
+                        this.saveState();
+                        this.closeAuthModal();
+                        this.showToast(`Signed in as ${this.state.user.name}`);
+                        this.render();
+                    }
+                }
+            }
+
+            logout() {
+                this.state.user = null;
+                this.saveState();
+                this.showToast('You have been securely logged out.');
+                this.navigate('home');
+            }
+
+            // FAVORITES & COMPARISON
+            toggleFavorite(propId, event) {
+                if (event) event.stopPropagation();
+                if (this.state.favorites.includes(propId)) {
+                    this.state.favorites = this.state.favorites.filter(id => id !== propId);
+                    this.showToast('Removed from Saved Properties');
+                } else {
+                    this.state.favorites.push(propId);
+                    this.showToast('Saved to your Favorites!');
+                }
+                this.saveState();
+                this.render();
+            }
+
+            toggleCompare(propId, event) {
+                if (event) event.stopPropagation();
+                if (this.state.compareList.includes(propId)) {
+                    this.state.compareList = this.state.compareList.filter(id => id !== propId);
+                    this.showToast('Removed from Property Comparison');
+                } else {
+                    if (this.state.compareList.length >= 4) {
+                        this.showToast('Maximum 4 properties can be compared at once.', 'warning');
+                        return;
+                    }
+                    this.state.compareList.push(propId);
+                    this.showToast(`Added to Comparison (${this.state.compareList.length}/4)`);
+                }
+                this.saveState();
+                this.render();
+            }
+
+            // BOOKING & APPOINTMENTS
+            openBookingModal(propId) {
+                const prop = this.state.properties.find(p => p.id === propId);
+                if (!prop) return;
+                document.getElementById('bookingPropId').value = prop.id;
+                document.getElementById('bookingPropTitle').textContent = `${prop.title} (${prop.city}, ${prop.country})`;
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.getElementById('bookingDate').value = tomorrow.toISOString().split('T')[0];
+                document.getElementById('bookingModal').classList.remove('hidden');
+            }
+            closeBookingModal() {
+                document.getElementById('bookingModal').classList.add('hidden');
+            }
+            handleBookingSubmit(e) {
+                e.preventDefault();
+                const propId = document.getElementById('bookingPropId').value;
+                const date = document.getElementById('bookingDate').value;
+                const time = document.getElementById('bookingTime').value;
+                const type = document.getElementById('bookingVisitType').value;
+                const userName = this.state.user ? this.state.user.name : 'Guest Visitor';
+                const userId = this.state.user ? this.state.user.id : 'GUEST';
+                const isPaid = type.includes('VIP');
+
+                this.state.appointments.unshift({
+                    id: 'APT-' + Date.now().toString().slice(-4),
+                    propId,
+                    userId,
+                    userName,
+                    date,
+                    time,
+                    type,
+                    status: 'Pending Confirmation',
+                    paymentStatus: isPaid ? 'Authorized ($25 Token)' : 'Free'
+                });
+                this.saveState();
+                this.closeBookingModal();
+                this.showToast('Visit request submitted! Agent notified.');
+                if (this.state.currentPage === 'dashboard') this.render();
+            }
+
+            // PROPERTY CARD TEMPLATE
+            renderPropertyCard(prop) {
+                const isFav = this.state.favorites.includes(prop.id);
+                const isComp = this.state.compareList.includes(prop.id);
+                const pricePerSqFt = this.formatPrice(Math.round(prop.priceUSD / prop.sizeSqFt));
+
+                return `
+                <div onclick="app.navigate('details', {id: '${prop.id}'})" class="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm card-hover cursor-pointer flex flex-col justify-between group">
+                    <div>
+                        <div class="relative h-56 overflow-hidden bg-slate-200">
+                            <img src="${prop.images[0]}" alt="${prop.title}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider ${prop.listingType === 'Buy' ? 'bg-navy-900 text-white' : 'bg-emerald-600 text-white'}">
+                                    For ${prop.listingType}
+                                </span>
+                                ${prop.verified ? `<span class="px-2 py-1 rounded-md text-[11px] font-semibold bg-white/95 text-emerald-700 flex items-center gap-1 shadow-sm"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Verified</span>` : ''}
+                                ${prop.isDemo ? `<span class="px-2 py-1 rounded-md text-[10px] font-bold bg-amber-400/95 text-navy-950">DEMO LISTING</span>` : ''}
+                            </div>
+                            <div class="absolute top-3 right-3 flex flex-col gap-1.5">
+                                <button onclick="app.toggleFavorite('${prop.id}', event)" class="w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow transition ${isFav ? 'text-red-500' : 'text-slate-600'}" title="Save Favorite">
+                                    <i data-lucide="heart" class="w-4 h-4 ${isFav ? 'fill-current' : ''}"></i>
+                                </button>
+                                <button onclick="app.toggleCompare('${prop.id}', event)" class="w-8 h-8 rounded-full ${isComp ? 'bg-gold-500 text-navy-950' : 'bg-white/90 hover:bg-white text-slate-600'} flex items-center justify-center shadow transition" title="Compare Property">
+                                    <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                                <div class="bg-navy-950/85 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg">
+                                    <p class="text-lg font-bold text-gold-400 leading-none">${this.formatPrice(prop.priceUSD, prop.listingType)}</p>
+                                    <p class="text-[10px] text-slate-300 mt-0.5">${pricePerSqFt}/sq.ft • ID: ${prop.id}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4">
+                            <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                                <span class="font-semibold text-navy-800">${prop.category}</span>
+                                <span>${prop.furnishing}</span>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base line-clamp-1 group-hover:text-navy-800 transition">${prop.title}</h3>
+                            <p class="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-gold-600 shrink-0"></i>
+                                <span class="truncate">${prop.locality}, ${prop.city}, ${prop.country}</span>
+                            </p>
+
+                            <div class="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600">
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="bed-double" class="w-4 h-4 text-slate-400"></i>
+                                    <span><strong>${prop.bedrooms}</strong> Beds</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="bath" class="w-4 h-4 text-slate-400"></i>
+                                    <span><strong>${prop.bathrooms}</strong> Baths</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <i data-lucide="maximize-2" class="w-4 h-4 text-slate-400"></i>
+                                    <span><strong>${prop.sizeSqFt.toLocaleString()}</strong> ft²</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-500">Listed ${prop.listedDate}</span>
+                        <span class="text-xs font-semibold text-navy-900 group-hover:text-gold-600 flex items-center gap-1">
+                            View Details <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </span>
+                    </div>
+                </div>`;
+            }
+
+            // 1. HOMEPAGE VIEW
+            renderHome() {
+                const activeProps = this.state.properties.filter(p => p.status === 'Active');
+                const featured = activeProps.filter(p => p.isFeatured).slice(0, 4);
+                const trending = activeProps.filter(p => p.isTrending).slice(0, 4);
+                const commercial = activeProps.filter(p => ['Commercial buildings', 'Office spaces', 'Shops', 'Plots'].includes(p.category)).slice(0, 4);
+
+                return `
+                <!-- HERO SECTION -->
+                <section class="hero-bg text-white py-20 lg:py-28 px-4">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="max-w-3xl">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/20 border border-gold-400/40 text-gold-300 text-xs font-semibold tracking-wider uppercase mb-4">
+                                <i data-lucide="globe" class="w-3.5 h-3.5"></i> India & International Verified Marketplace
+                            </span>
+                            <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
+                                Find Your Dream Property
+                            </h1>
+                            <p class="text-slate-300 text-base sm:text-lg mt-4 max-w-2xl">
+                                Discover verified luxury villas, smart apartments, Grade-A commercial offices, and RERA-approved plots across Bengaluru, Mumbai, Dubai, London, and Austin.
+                            </p>
+                        </div>
+
+                        <!-- HERO SEARCH ENGINE BAR -->
+                        <div class="mt-10 bg-white text-slate-900 rounded-2xl p-4 sm:p-6 shadow-2xl max-w-6xl">
+                            <div class="flex flex-wrap gap-2 mb-4 border-b border-slate-100 pb-3" id="heroTabGroup">
+                                <button type="button" onclick="app.setHeroTab('Buy', this)" class="hero-tab px-4 py-1.5 rounded-lg text-sm font-bold bg-navy-900 text-white">Buy</button>
+                                <button type="button" onclick="app.setHeroTab('Rent', this)" class="hero-tab px-4 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Rent</button>
+                                <button type="button" onclick="app.setHeroTab('Commercial', this)" class="hero-tab px-4 py-1.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Commercial</button>
+                            </div>
+                            <form onsubmit="app.handleHeroSearch(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                                <input type="hidden" id="heroListingType" value="Buy">
+                                <div class="lg:col-span-2">
+                                    <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Location, City, Country or ID</label>
+                                    <div class="relative">
+                                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                                        <input type="text" id="heroKeyword" placeholder="Bengaluru, Dubai, London, EX-IN-1001..." class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-navy-800">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Property Type</label>
+                                    <select id="heroCategory" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-navy-800">
+                                        <option value="">All Categories</option>
+                                        <option value="Apartments">Apartments</option>
+                                        <option value="Villas">Villas</option>
+                                        <option value="Independent houses">Independent Houses</option>
+                                        <option value="Plots">Plots & Land</option>
+                                        <option value="Office spaces">Office Spaces</option>
+                                        <option value="Commercial buildings">Commercial Buildings</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Max Budget (USD)</label>
+                                    <select id="heroMaxPrice" class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-navy-800">
+                                        <option value="">Any Budget</option>
+                                        <option value="5000">Up to $5,000 / mo</option>
+                                        <option value="250000">Up to $250,000</option>
+                                        <option value="1500000">Up to $1.5 Million</option>
+                                        <option value="3000000">Up to $3.0 Million</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit" class="w-full bg-gold-500 hover:bg-gold-400 text-navy-950 font-bold py-2.5 px-6 rounded-xl transition shadow-md flex items-center justify-center gap-2">
+                                        <i data-lucide="search" class="w-4 h-4"></i> Search
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FEATURED PROPERTIES -->
+                <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+                    <div class="flex flex-wrap justify-between items-end mb-8 gap-4">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-widest text-gold-600">Curated Portfolio</span>
+                            <h2 class="font-serif text-3xl font-bold text-navy-900 mt-1">Featured Global Properties</h2>
+                        </div>
+                        <button onclick="app.navigate('search')" class="text-sm font-semibold text-navy-900 hover:text-gold-600 flex items-center gap-1">
+                            Explore All ${activeProps.length} Listings <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${featured.map(p => this.renderPropertyCard(p)).join('')}
+                    </div>
+                </section>
+
+                <!-- POPULAR GLOBAL LOCATIONS -->
+                <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+                    <div class="mb-8">
+                        <span class="text-xs font-bold uppercase tracking-widest text-emerald-600">Market Hotspots</span>
+                        <h2 class="font-serif text-3xl font-bold text-navy-900 mt-1">Popular Locations</h2>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${[
+                            { city: 'Bengaluru', country: 'India', tag: 'Tech Capital', img: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=800&q=80' },
+                            { city: 'Dubai', country: 'UAE', tag: 'Tax-Free Luxury', img: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=800&q=80' },
+                            { city: 'Mumbai', country: 'India', tag: 'Financial Hub', img: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=800&q=80' },
+                            { city: 'London', country: 'United Kingdom', tag: 'Prime Heritage', img: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80' }
+                        ].map(loc => `
+                            <div onclick="app.navigate('search', {keyword: '${loc.city}'})" class="relative h-48 rounded-2xl overflow-hidden cursor-pointer group shadow-md">
+                                <img src="${loc.img}" alt="${loc.city}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <div class="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/30 to-transparent flex flex-col justify-end p-4 text-white">
+                                    <span class="text-[10px] uppercase tracking-wider text-gold-400 font-bold">${loc.tag}</span>
+                                    <h3 class="text-lg font-bold">${loc.city}</h3>
+                                    <p class="text-xs text-slate-300">${loc.country}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <!-- TRENDING & COMMERCIAL SPLIT -->
+                <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-widest text-gold-600">High Demand</span>
+                            <h2 class="font-serif text-3xl font-bold text-navy-900 mt-1">Trending Villas, Apartments & Plots</h2>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${trending.map(p => this.renderPropertyCard(p)).join('')}
+                    </div>
+                </section>
+
+                <!-- WHY CHOOSE ESTATEX -->
+                <section class="bg-navy-900 text-white mt-20 py-16 px-4">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="text-center max-w-2xl mx-auto mb-12">
+                            <span class="text-xs font-bold uppercase tracking-widest text-gold-400">The ESTATEX Standard</span>
+                            <h2 class="font-serif text-3xl font-bold mt-2">Why Global Buyers & Investors Choose Us</h2>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                            ${[
+                                { icon: 'shield-check', title: 'Verified Listings', desc: 'RERA, title deed, and physical coordinate verification before badge issuance.' },
+                                { icon: 'award', title: 'Trusted Agents', desc: 'Licensed, background-checked real-estate advisors with transparent track records.' },
+                                { icon: 'file-text', title: 'Transparent Info', desc: 'Clear price-per-sq.ft analytics, floor plans, and nearby infrastructure metrics.' },
+                                { icon: 'compass', title: 'Easy Discovery', desc: 'AI-powered recommendations, interactive maps, and side-by-side comparisons.' },
+                                { icon: 'lock', title: 'Secure Comms', desc: 'Encrypted buyer-agent messaging with phone number privacy protection.' }
+                            ].map(item => `
+                                <div class="bg-navy-800/70 border border-navy-700 p-6 rounded-2xl">
+                                    <div class="w-11 h-11 rounded-xl bg-gold-500/15 text-gold-400 flex items-center justify-center mb-4">
+                                        <i data-lucide="${item.icon}" class="w-6 h-6"></i>
+                                    </div>
+                                    <h3 class="font-bold text-base mb-2">${item.title}</h3>
+                                    <p class="text-xs text-slate-300 leading-relaxed">${item.desc}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+                `;
+            }
+
+            setHeroTab(type, btn) {
+                document.querySelectorAll('.hero-tab').forEach(b => {
+                    b.classList.remove('bg-navy-900', 'text-white');
+                    b.classList.add('text-slate-600');
+                });
+                btn.classList.add('bg-navy-900', 'text-white');
+                btn.classList.remove('text-slate-600');
+                document.getElementById('heroListingType').value = type;
+            }
+
+            handleHeroSearch(e) {
+                e.preventDefault();
+                const typeVal = document.getElementById('heroListingType').value;
+                const keyword = document.getElementById('heroKeyword').value.trim();
+                const category = document.getElementById('heroCategory').value;
+                const maxPrice = document.getElementById('heroMaxPrice').value;
+
+                if (typeVal === 'Commercial') {
+                    this.navigate('search', { keyword, category: 'Commercial', maxPrice });
+                } else {
+                    this.navigate('search', { listingType: typeVal, keyword, category, maxPrice });
+                }
+            }
+
+            // 2. ADVANCED PROPERTY SEARCH ENGINE
+            getFilteredProperties() {
+                const f = this.state.filters;
+                let list = this.state.properties.filter(p => p.status === 'Active');
+
+                if (f.keyword) {
+                    const q = f.keyword.toLowerCase();
+                    list = list.filter(p =>
+                        p.title.toLowerCase().includes(q) ||
+                        p.city.toLowerCase().includes(q) ||
+                        p.state.toLowerCase().includes(q) ||
+                        p.country.toLowerCase().includes(q) ||
+                        p.locality.toLowerCase().includes(q) ||
+                        p.id.toLowerCase().includes(q)
+                    );
+                }
+                if (f.listingType) list = list.filter(p => p.listingType === f.listingType);
+                if (f.category) {
+                    if (f.category === 'Commercial') {
+                        list = list.filter(p => ['Commercial buildings', 'Office spaces', 'Shops'].includes(p.category));
+                    } else {
+                        list = list.filter(p => p.category === f.category);
+                    }
+                }
+                if (f.country) list = list.filter(p => p.country === f.country);
+                if (f.minPrice) list = list.filter(p => p.priceUSD >= Number(f.minPrice));
+                if (f.maxPrice) list = list.filter(p => p.priceUSD <= Number(f.maxPrice));
+                if (f.bedrooms) list = list.filter(p => p.bedrooms >= Number(f.bedrooms));
+                if (f.bathrooms) list = list.filter(p => p.bathrooms >= Number(f.bathrooms));
+                if (f.furnishing) list = list.filter(p => p.furnishing === f.furnishing);
+                if (f.verifiedOnly) list = list.filter(p => p.verified);
+                if (f.isNewProject) list = list.filter(p => p.isNewProject);
+
+                if (f.sortBy === 'price_asc') list.sort((a, b) => a.priceUSD - b.priceUSD);
+                else if (f.sortBy === 'price_desc') list.sort((a, b) => b.priceUSD - a.priceUSD);
+                else if (f.sortBy === 'size_desc') list.sort((a, b) => b.sizeSqFt - a.sizeSqFt);
+                else if (f.sortBy === 'popular') list.sort((a, b) => (b.views || 0) - (a.views || 0));
+                else list.sort((a, b) => b.listedDate.localeCompare(a.listedDate));
+
+                return list;
+            }
+
+            updateFilter(key, value) {
+                this.state.filters[key] = value;
+                this.render();
+            }
+
+            clearFilters() {
+                this.state.filters = {
+                    keyword: '', listingType: '', category: '', country: '', minPrice: '', maxPrice: '',
+                    bedrooms: '', bathrooms: '', furnishing: '', verifiedOnly: false, isNewProject: false,
+                    sortBy: 'newest', viewMode: this.state.filters.viewMode
+                };
+                this.render();
+            }
+
+            renderSearch() {
+                const f = this.state.filters;
+                const results = this.getFilteredProperties();
+
+                return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h1 class="font-serif text-3xl font-bold text-navy-900">Global Property Search</h1>
+                            <p class="text-sm text-slate-500">Showing <strong>${results.length}</strong> database-verified properties</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="bg-white border border-slate-200 rounded-xl p-1 flex">
+                                <button onclick="app.updateFilter('viewMode', 'grid')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${f.viewMode === 'grid' ? 'bg-navy-900 text-white' : 'text-slate-600'}">
+                                    <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Grid View
+                                </button>
+                                <button onclick="app.updateFilter('viewMode', 'map')" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${f.viewMode === 'map' ? 'bg-navy-900 text-white' : 'text-slate-600'}">
+                                    <i data-lucide="map" class="w-3.5 h-3.5"></i> Interactive Map
+                                </button>
+                            </div>
+                            <select onchange="app.updateFilter('sortBy', this.value)" class="bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none">
+                                <option value="newest" ${f.sortBy === 'newest' ? 'selected' : ''}>Sort: Newest First</option>
+                                <option value="price_asc" ${f.sortBy === 'price_asc' ? 'selected' : ''}>Price: Low to High</option>
+                                <option value="price_desc" ${f.sortBy === 'price_desc' ? 'selected' : ''}>Price: High to Low</option>
+                                <option value="size_desc" ${f.sortBy === 'size_desc' ? 'selected' : ''}>Size: Largest First</option>
+                                <option value="popular" ${f.sortBy === 'popular' ? 'selected' : ''}>Most Popular</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <!-- SIDEBAR FILTERS -->
+                        <aside class="bg-white p-5 rounded-2xl border border-slate-200 h-fit space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                                <h3 class="font-bold text-navy-900 text-sm flex items-center gap-2"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Filters</h3>
+                                <button onclick="app.clearFilters()" class="text-xs text-red-600 hover:underline font-medium">Clear All</button>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Keyword / City / ID</label>
+                                <input type="text" value="${f.keyword}" oninput="app.updateFilter('keyword', this.value)" placeholder="e.g. Indiranagar, Dubai..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Listing Type</label>
+                                <select onchange="app.updateFilter('listingType', this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                                    <option value="" ${f.listingType === '' ? 'selected' : ''}>Buy & Rent</option>
+                                    <option value="Buy" ${f.listingType === 'Buy' ? 'selected' : ''}>Buy</option>
+                                    <option value="Rent" ${f.listingType === 'Rent' ? 'selected' : ''}>Rent</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Property Category</label>
+                                <select onchange="app.updateFilter('category', this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                                    <option value="">All Categories</option>
+                                    ${['Apartments', 'Villas', 'Independent houses', 'Plots', 'Commercial buildings', 'Office spaces', 'Shops', 'Agricultural land'].map(c =>
+                                        `<option value="${c}" ${f.category === c ? 'selected' : ''}>${c}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Country</label>
+                                <select onchange="app.updateFilter('country', this.value)" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                                    <option value="">All Countries</option>
+                                    ${['India', 'UAE', 'United Kingdom', 'USA'].map(c =>
+                                        `<option value="${c}" ${f.country === c ? 'selected' : ''}>${c}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Min USD</label>
+                                    <input type="number" value="${f.minPrice}" onchange="app.updateFilter('minPrice', this.value)" placeholder="0" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Max USD</label>
+                                    <input type="number" value="${f.maxPrice}" onchange="app.updateFilter('maxPrice', this.value)" placeholder="Any" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Min Beds</label>
+                                    <select onchange="app.updateFilter('bedrooms', this.value)" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs">
+                                        <option value="">Any</option>
+                                        <option value="1" ${f.bedrooms === '1' ? 'selected' : ''}>1+ BHK</option>
+                                        <option value="2" ${f.bedrooms === '2' ? 'selected' : ''}>2+ BHK</option>
+                                        <option value="3" ${f.bedrooms === '3' ? 'selected' : ''}>3+ BHK</option>
+                                        <option value="4" ${f.bedrooms === '4' ? 'selected' : ''}>4+ BHK</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Furnishing</label>
+                                    <select onchange="app.updateFilter('furnishing', this.value)" class="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs">
+                                        <option value="">Any</option>
+                                        <option value="Fully Furnished" ${f.furnishing === 'Fully Furnished' ? 'selected' : ''}>Furnished</option>
+                                        <option value="Semi-Furnished" ${f.furnishing === 'Semi-Furnished' ? 'selected' : ''}>Semi</option>
+                                        <option value="Unfurnished" ${f.furnishing === 'Unfurnished' ? 'selected' : ''}>Unfurnished</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <label class="flex items-center gap-2 text-xs font-medium text-slate-700 pt-2 cursor-pointer">
+                                <input type="checkbox" ${f.verifiedOnly ? 'checked' : ''} onchange="app.updateFilter('verifiedOnly', this.checked)" class="rounded text-navy-900">
+                                Verified Listings Only
+                            </label>
+
+                            ${this.state.searchHistory.length ? `
+                            <div class="pt-3 border-t border-slate-100">
+                                <p class="text-[11px] font-semibold text-slate-400 uppercase mb-1.5">Recent Searches</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${this.state.searchHistory.map(term => `<button onclick="app.updateFilter('keyword', '${term}')" class="text-[11px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700">${term}</button>`).join('')}
+                                </div>
+                            </div>` : ''}
+                        </aside>
+
+                        <!-- RESULTS AREA -->
+                        <div class="lg:col-span-3">
+                            ${results.length === 0 ? `
+                                <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                                    <i data-lucide="search-x" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+                                    <h3 class="text-lg font-bold text-slate-800">No properties matched your exact criteria</h3>
+                                    <p class="text-sm text-slate-500 mt-1">Try widening your budget range or clearing active filters.</p>
+                                    <button onclick="app.clearFilters()" class="mt-4 px-5 py-2 bg-navy-900 text-white text-sm font-semibold rounded-xl">Reset All Filters</button>
+                                </div>
+                            ` : f.viewMode === 'map' ? `
+                                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div id="searchResultsMap" class="w-full h-[560px]"></div>
+                                </div>
+                            ` : `
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    ${results.map(p => this.renderPropertyCard(p)).join('')}
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // 3. PROPERTY DETAILS PAGE
+            renderDetails() {
+                const prop = this.state.properties.find(p => p.id === this.state.selectedPropertyId) || this.state.properties[0];
+                const agent = this.state.agents.find(a => a.id === prop.agentId) || this.state.agents[0];
+                const isFav = this.state.favorites.includes(prop.id);
+                const isComp = this.state.compareList.includes(prop.id);
+                const pricePerSqFt = this.formatPrice(Math.round(prop.priceUSD / prop.sizeSqFt));
+
+                return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <!-- Breadcrumb -->
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <button onclick="app.navigate('search')" class="text-sm font-semibold text-slate-600 hover:text-navy-900 flex items-center gap-1.5">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Search Results
+                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="app.toggleFavorite('${prop.id}')" class="px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${isFav ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}">
+                                <i data-lucide="heart" class="w-4 h-4 ${isFav ? 'fill-current' : ''}"></i> ${isFav ? 'Saved' : 'Save'}
+                            </button>
+                            <button onclick="app.toggleCompare('${prop.id}')" class="px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${isComp ? 'bg-gold-500 border-gold-500 text-navy-950' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}">
+                                <i data-lucide="arrow-left-right" class="w-4 h-4"></i> ${isComp ? 'In Comparison' : 'Compare'}
+                            </button>
+                            <button onclick="navigator.clipboard?.writeText(window.location.href); app.showToast('Property link copied to clipboard!')" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5">
+                                <i data-lucide="share-2" class="w-4 h-4"></i> Share
+                            </button>
+                            <button onclick="app.reportProperty('${prop.id}')" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5">
+                                <i data-lucide="flag" class="w-4 h-4"></i> Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Title & Price Header -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-6 flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="px-2.5 py-0.5 rounded text-xs font-bold bg-navy-900 text-white">For ${prop.listingType}</span>
+                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">${prop.category}</span>
+                                <span class="px-2.5 py-0.5 rounded text-xs font-mono bg-slate-100 text-slate-600">ID: ${prop.id}</span>
+                                ${prop.verified ? `<span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Verified Listing</span>` : ''}
+                                ${prop.isDemo ? `<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">DEMO LISTING</span>` : ''}
+                            </div>
+                            <h1 class="font-serif text-2xl sm:text-3xl font-bold text-navy-900">${prop.title}</h1>
+                            <p class="text-sm text-slate-500 flex items-center gap-1.5 mt-1">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-gold-600"></i> ${prop.address}
+                            </p>
+                        </div>
+                        <div class="lg:text-right border-t lg:border-t-0 pt-4 lg:pt-0 border-slate-100">
+                            <p class="text-3xl font-bold text-navy-900">${this.formatPrice(prop.priceUSD, prop.listingType)}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Est. ${pricePerSqFt} per sq.ft • ${prop.views} views</p>
+                        </div>
+                    </div>
+
+                    <!-- Image Gallery -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="md:col-span-2 h-80 sm:h-[420px] rounded-2xl overflow-hidden bg-slate-200">
+                            <img id="mainGalleryImg" src="${prop.images[0]}" alt="${prop.title}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex md:flex-col gap-3 overflow-x-auto">
+                            ${prop.images.map((img, idx) => `
+                                <img src="${img}" onclick="document.getElementById('mainGalleryImg').src='${img}'" class="h-24 md:h-32 w-36 md:w-full object-cover rounded-xl cursor-pointer border-2 border-transparent hover:border-gold-500 transition shrink-0">
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Main Details + Sticky Agent Sidebar -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 space-y-8">
+                            <!-- Key Specs Grid -->
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div><p class="text-xs text-slate-400">Area</p><p class="font-bold text-navy-900 text-base">${prop.sizeSqFt.toLocaleString()} sq.ft</p></div>
+                                <div><p class="text-xs text-slate-400">Configuration</p><p class="font-bold text-navy-900 text-base">${prop.bedrooms} Beds • ${prop.bathrooms} Baths</p></div>
+                                <div><p class="text-xs text-slate-400">Furnishing</p><p class="font-bold text-navy-900 text-base">${prop.furnishing}</p></div>
+                                <div><p class="text-xs text-slate-400">Parking</p><p class="font-bold text-navy-900 text-base">${prop.parking}</p></div>
+                                <div><p class="text-xs text-slate-400">Floor</p><p class="font-bold text-navy-900 text-base">${prop.floor}</p></div>
+                                <div><p class="text-xs text-slate-400">Property Age</p><p class="font-bold text-navy-900 text-base">${prop.ageYears === 0 ? 'Brand New' : prop.ageYears + ' Years'}</p></div>
+                                <div><p class="text-xs text-slate-400">Listed On</p><p class="font-bold text-navy-900 text-base">${prop.listedDate}</p></div>
+                                <div><p class="text-xs text-slate-400">Status</p><p class="font-bold text-emerald-600 text-base">${prop.status}</p></div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200">
+                                <h2 class="font-serif text-xl font-bold text-navy-900 mb-3">Property Overview</h2>
+                                <p class="text-sm text-slate-600 leading-relaxed">${prop.description}</p>
+                            </div>
+
+                            <!-- Amenities -->
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200">
+                                <h2 class="font-serif text-xl font-bold text-navy-900 mb-4">Amenities & Features</h2>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    ${prop.amenities.map(a => `
+                                        <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                                            <span>${a}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Nearby Facilities & Geocoded Map -->
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200">
+                                <h2 class="font-serif text-xl font-bold text-navy-900 mb-4">Location & Nearby Connectivity</h2>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-xs">
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
+                                        <i data-lucide="graduation-cap" class="w-5 h-5 text-navy-800"></i>
+                                        <div><p class="text-slate-400">Nearest School</p><p class="font-semibold text-slate-800">${prop.nearby.school}</p></div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
+                                        <i data-lucide="heart-pulse" class="w-5 h-5 text-red-600"></i>
+                                        <div><p class="text-slate-400">Hospital</p><p class="font-semibold text-slate-800">${prop.nearby.hospital}</p></div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
+                                        <i data-lucide="train" class="w-5 h-5 text-emerald-600"></i>
+                                        <div><p class="text-slate-400">Transit / Rail</p><p class="font-semibold text-slate-800">${prop.nearby.transport}</p></div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5">
+                                        <i data-lucide="plane" class="w-5 h-5 text-gold-600"></i>
+                                        <div><p class="text-slate-400">Airport</p><p class="font-semibold text-slate-800">${prop.nearby.airport}</p></div>
+                                    </div>
+                                </div>
+                                <div id="propertyDetailMap" class="w-full h-72"></div>
+                                <p class="text-[11px] text-slate-400 mt-2">Coordinates: ${prop.lat.toFixed(4)}° N, ${prop.lng.toFixed(4)}° E</p>
+                            </div>
+                        </div>
+
+                        <!-- AGENT & INQUIRY SIDEBAR -->
+                        <div class="space-y-6">
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm sticky top-24">
+                                <div class="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                    <img src="${agent.avatar}" alt="${agent.name}" class="w-14 h-14 rounded-full object-cover border-2 border-gold-500">
+                                    <div>
+                                        <div class="flex items-center gap-1">
+                                            <h3 class="font-bold text-navy-900">${agent.name}</h3>
+                                            <i data-lucide="badge-check" class="w-4 h-4 text-emerald-600"></i>
+                                        </div>
+                                        <p class="text-xs text-slate-500">${agent.title}</p>
+                                        <p class="text-[11px] text-gold-600 font-semibold mt-0.5">★ ${agent.rating} • ${agent.dealsClosed} Deals Closed</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 my-4">
+                                    <button onclick="app.openBookingModal('${prop.id}')" class="col-span-2 bg-navy-900 hover:bg-navy-800 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                                        <i data-lucide="calendar" class="w-4 h-4 text-gold-400"></i> Schedule Property Visit
+                                    </button>
+                                    <button onclick="app.showToast('Authorized call relay initiated to ${agent.name}')" class="bg-slate-100 hover:bg-slate-200 text-navy-900 font-semibold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                                        <i data-lucide="phone" class="w-3.5 h-3.5"></i> Call Agent
+                                    </button>
+                                    <button onclick="app.showToast('Opening encrypted WhatsApp Business channel...')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5">
+                                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
+                                    </button>
+                                </div>
+
+                                <form onsubmit="app.handleDirectInquiry(event, '${prop.id}', '${agent.name}')" class="space-y-3 pt-3 border-t border-slate-100">
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Send Direct Inquiry</h4>
+                                    <input type="text" id="inqName" required value="${this.state.user ? this.state.user.name : ''}" placeholder="Your Full Name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                                    <input type="email" id="inqEmail" required value="${this.state.user ? this.state.user.email : ''}" placeholder="Your Email Address" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs">
+                                    <textarea id="inqMessage" rows="3" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs" placeholder="I am interested in ${prop.id} (${prop.title}). Please share floor plans and availability."></textarea>
+                                    <button type="submit" class="w-full bg-gold-500 hover:bg-gold-400 text-navy-950 font-bold py-2.5 rounded-xl text-xs transition shadow">Contact Owner / Agent</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            handleDirectInquiry(e, propId, agentName) {
+                e.preventDefault();
+                const sender = document.getElementById('inqName').value;
+                const text = document.getElementById('inqMessage').value;
+                this.state.messages.unshift({
+                    id: 'MSG-' + Date.now().toString().slice(-4),
+                    propId,
+                    sender,
+                    recipient: agentName,
+                    text,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                this.saveState();
+                e.target.reset();
+                this.showToast(`Message delivered securely to ${agentName}! View in Dashboard.`);
+            }
+
+            reportProperty(propId) {
+                const reason = prompt("Please specify the reason for reporting this listing (e.g., inaccurate price, duplicate, unavailable):");
+                if (reason && reason.trim()) {
+                    this.state.reports.unshift({
+                        id: 'REP-' + Date.now().toString().slice(-4),
+                        propId,
+                        reason: reason.trim(),
+                        date: new Date().toISOString().split('T')[0],
+                        status: 'Open'
+                    });
+                    this.saveState();
+                    this.showToast('Listing flagged for Admin moderation review.', 'warning');
+                }
+            }
+
+            // 4. PROPERTY COMPARISON TOOL (UP TO 4 PROPERTIES)
+            renderCompare() {
+                const items = this.state.compareList.map(id => this.state.properties.find(p => p.id === id)).filter(Boolean);
+
+                return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+                        <div>
+                            <h1 class="font-serif text-3xl font-bold text-navy-900">Property Comparison Matrix</h1>
+                            <p class="text-sm text-slate-500">Compare up to 4 properties side-by-side across price, area, price/sq.ft, and amenities.</p>
+                        </div>
+                        <button onclick="app.navigate('search')" class="px-4 py-2 bg-navy-900 text-white text-xs font-semibold rounded-xl">+ Add Properties to Compare</button>
+                    </div>
+
+                    ${items.length === 0 ? `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+                            <p class="text-slate-600 mb-4">Your comparison tray is currently empty.</p>
+                            <button onclick="app.navigate('search')" class="px-5 py-2.5 bg-gold-500 text-navy-950 font-bold rounded-xl text-sm">Browse Properties</button>
+                        </div>
+                    ` : `
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+                            <table class="w-full text-left border-collapse min-w-[760px]">
+                                <thead>
+                                    <tr class="border-b border-slate-200 bg-slate-50">
+                                        <th class="p-4 text-xs font-bold uppercase text-slate-500 w-44">Feature</th>
+                                        ${items.map(p => `
+                                            <th class="p-4 align-top w-64">
+                                                <div class="relative">
+                                                    <img src="${p.images[0]}" class="w-full h-32 object-cover rounded-xl mb-2">
+                                                    <button onclick="app.toggleCompare('${p.id}')" class="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full shadow"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                                                </div>
+                                                <h4 class="font-bold text-sm text-navy-900 line-clamp-1">${p.title}</h4>
+                                                <p class="text-xs text-slate-500">${p.city}, ${p.country}</p>
+                                            </th>
+                                        `).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-sm">
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Price</td>
+                                        ${items.map(p => `<td class="p-4 font-bold text-navy-900 text-base">${this.formatPrice(p.priceUSD, p.listingType)}</td>`).join('')}
+                                    </tr>
+                                    <tr class="bg-amber-50/40">
+                                        <td class="p-4 font-semibold text-slate-600">Price / Sq.Ft</td>
+                                        ${items.map(p => `<td class="p-4 font-semibold text-emerald-700">${this.formatPrice(Math.round(p.priceUSD / p.sizeSqFt))}/ft²</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Category & Type</td>
+                                        ${items.map(p => `<td class="p-4">${p.category} (${p.listingType})</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Total Area</td>
+                                        ${items.map(p => `<td class="p-4 font-medium">${p.sizeSqFt.toLocaleString()} sq.ft</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Bedrooms / Baths</td>
+                                        ${items.map(p => `<td class="p-4">${p.bedrooms} Beds / ${p.bathrooms} Baths</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Furnishing</td>
+                                        ${items.map(p => `<td class="p-4">${p.furnishing}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Parking</td>
+                                        ${items.map(p => `<td class="p-4">${p.parking}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Property Age</td>
+                                        ${items.map(p => `<td class="p-4">${p.ageYears === 0 ? 'Brand New' : p.ageYears + ' Years'}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4 font-semibold text-slate-600">Key Amenities</td>
+                                        ${items.map(p => `<td class="p-4 text-xs text-slate-600">${p.amenities.join(', ')}</td>`).join('')}
+                                    </tr>
+                                    <tr>
+                                        <td class="p-4"></td>
+                                        ${items.map(p => `<td class="p-4"><button onclick="app.navigate('details', {id: '${p.id}'})" class="w-full py-2 bg-navy-900 text-white text-xs font-semibold rounded-lg">View Listing</button></td>`).join('')}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                </div>`;
+            }
+
+            // 5. PROPERTY LISTING SUBMISSION SYSTEM (SELL / PUBLISH)
+            renderSell() {
+                const canPublish = this.state.user && ['Property Owner', 'Real Estate Agent', 'Administrator'].includes(this.state.user.role);
+
+                return `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div class="mb-8">
+                        <span class="text-xs font-bold uppercase tracking-widest text-gold-600">Owner & Agent Portal</span>
+                        <h1 class="font-serif text-3xl font-bold text-navy-900 mt-1">Publish a Property on ESTATEX</h1>
+                        <p class="text-sm text-slate-500 mt-1">All submitted listings undergo verification and Admin approval before going live globally.</p>
+                    </div>
+
+                    ${!canPublish ? `
+                        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="font-bold text-amber-900 text-base">Authorization Required to Publish</h3>
+                                <p class="text-xs text-amber-800 mt-1">You must be logged in as a <strong>Property Owner</strong>, <strong>Real Estate Agent</strong>, or <strong>Administrator</strong> to create listings.</p>
+                            </div>
+                            <button onclick="app.openAuthModal('login')" class="px-5 py-2.5 bg-navy-900 text-white text-xs font-bold rounded-xl shrink-0">Switch Role / Login</button>
+                        </div>
+                    ` : ''}
+
+                    <form onsubmit="app.handleCreateListing(event)" class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6 ${!canPublish ? 'opacity-60 pointer-events-none' : ''}">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Property Title *</label>
+                                <input type="text" id="sellTitle" required placeholder="e.g. Palm Grove 4BHK Waterfront Villa" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Listing Purpose *</label>
+                                <select id="sellType" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                                    <option value="Buy">Sell (For Sale)</option>
+                                    <option value="Rent">Rent / Lease</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Property Category *</label>
+                                <select id="sellCategory" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                                    <option value="Apartments">Apartments</option>
+                                    <option value="Villas">Villas</option>
+                                    <option value="Independent houses">Independent houses</option>
+                                    <option value="Plots">Plots</option>
+                                    <option value="Commercial buildings">Commercial buildings</option>
+                                    <option value="Office spaces">Office spaces</option>
+                                    <option value="Shops">Shops</option>
+                                    <option value="Agricultural land">Agricultural land</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Price (in USD) *</label>
+                                <input type="number" id="sellPrice" required min="100" placeholder="e.g. 450000" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Area Size (sq.ft) *</label>
+                                <input type="number" id="sellSize" required min="100" placeholder="e.g. 2400" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Bedrooms</label>
+                                <input type="number" id="sellBeds" value="3" min="0" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Bathrooms</label>
+                                <input type="number" id="sellBaths" value="3" min="0" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">City *</label>
+                                <input type="text" id="sellCity" required placeholder="e.g. Hyderabad" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">State / Province *</label>
+                                <input type="text" id="sellState" required placeholder="e.g. Telangana" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Country *</label>
+                                <select id="sellCountry" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                                    <option value="India">India</option>
+                                    <option value="UAE">UAE</option>
+                                    <option value="United Kingdom">United Kingdom</option>
+                                    <option value="USA">USA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Locality / Neighborhood *</label>
+                                <input type="text" id="sellLocality" required placeholder="e.g. Jubilee Hills" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Complete Street Address *</label>
+                                <input type="text" id="sellAddress" required placeholder="Plot 12, Road No. 36, Jubilee Hills, Hyderabad" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Property Description *</label>
+                                <textarea id="sellDesc" rows="3" required placeholder="Describe architecture, sunlight, legal status, and key highlights..." class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm"></textarea>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Upload Property Photos (Image Preview Supported)</label>
+                                <input type="file" id="sellImageUpload" accept="image/*" multiple onchange="app.previewUploadedImages(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-navy-900 file:text-white hover:file:bg-navy-800">
+                                <div id="sellImagePreview" class="flex gap-3 mt-3 overflow-x-auto"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap justify-end gap-3 pt-4 border-t border-slate-100">
+                            <button type="button" onclick="app.handleCreateListing(event, 'Draft')" class="px-5 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-xl text-sm hover:bg-slate-50">Save as Draft</button>
+                            <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm shadow">Submit for Approval</button>
+                        </div>
+                    </form>
+                </div>`;
+            }
+
+            previewUploadedImages(e) {
+                const preview = document.getElementById('sellImagePreview');
+                preview.innerHTML = '';
+                this.uploadedDataUrls = [];
+                Array.from(e.target.files).slice(0, 4).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                        this.uploadedDataUrls.push(ev.target.result);
+                        const img = document.createElement('img');
+                        img.src = ev.target.result;
+                        img.className = 'w-24 h-20 object-cover rounded-lg border border-slate-200';
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            handleCreateListing(e, statusOverride = 'Pending Approval') {
+                e.preventDefault();
+                if (!this.state.user) return;
+                const cityCoords = {
+                    'Hyderabad': [17.3850, 78.4867], 'Bengaluru': [12.9716, 77.5946], 'Mumbai': [19.0760, 72.8777],
+                    'Dubai': [25.2048, 55.2708], 'London': [51.5072, -0.1276], 'Austin': [30.2672, -97.7431]
+                };
+                const city = document.getElementById('sellCity').value.trim();
+                const [lat, lng] = cityCoords[city] || [17.4400, 78.3489];
+
+                const newProp = {
+                    id: 'EX-NEW-' + Date.now().toString().slice(-4),
+                    title: document.getElementById('sellTitle').value.trim(),
+                    listingType: document.getElementById('sellType').value,
+                    category: document.getElementById('sellCategory').value,
+                    priceUSD: Number(document.getElementById('sellPrice').value),
+                    city,
+                    state: document.getElementById('sellState').value.trim(),
+                    country: document.getElementById('sellCountry').value,
+                    locality: document.getElementById('sellLocality').value.trim(),
+                    address: document.getElementById('sellAddress').value.trim(),
+                    lat, lng,
+                    sizeSqFt: Number(document.getElementById('sellSize').value),
+                    bedrooms: Number(document.getElementById('sellBeds').value),
+                    bathrooms: Number(document.getElementById('sellBaths').value),
+                    furnishing: 'Semi-Furnished',
+                    parking: '2 Covered Slots',
+                    floor: 'Ground + 1',
+                    ageYears: 0,
+                    verified: false,
+                    isDemo: false,
+                    isFeatured: false,
+                    isTrending: true,
+                    isNewProject: false,
+                    views: 1,
+                    listedDate: new Date().toISOString().split('T')[0],
+                    status: this.state.user.role === 'Administrator' && statusOverride !== 'Draft' ? 'Active' : statusOverride,
+                    agentId: this.state.user.id,
+                    description: document.getElementById('sellDesc').value.trim(),
+                    amenities: ['24/7 Security', 'Power Backup', 'Parking'],
+                    nearby: { school: 'International School (1.5 km)', hospital: 'City Multispeciality Hospital (2.0 km)', transport: 'Metro / Rail Hub (1.8 km)', airport: 'International Airport (25 km)' },
+                    images: (this.uploadedDataUrls && this.uploadedDataUrls.length) ? this.uploadedDataUrls : ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80']
+                };
+
+                this.state.properties.unshift(newProp);
+                this.uploadedDataUrls = [];
+                this.saveState();
+                this.showToast(`Listing "${newProp.title}" saved with status: ${newProp.status}`);
+                this.navigate('dashboard');
+            }
+
+            // 6. ROLE-BASED DASHBOARDS (BUYER/TENANT, AGENT/OWNER, ADMINISTRATOR)
+            renderDashboard() {
+                if (!this.state.user) {
+                    return `
+                    <div class="max-w-xl mx-auto px-4 py-20 text-center">
+                        <h2 class="font-serif text-2xl font-bold text-navy-900">Sign In to Access Your Dashboard</h2>
+                        <p class="text-sm text-slate-500 mt-2 mb-6">Choose a role (Buyer, Tenant, Property Owner, Real Estate Agent, or Administrator) to explore role-based controls.</p>
+                        <button onclick="app.openAuthModal('login')" class="px-6 py-3 bg-navy-900 text-white font-semibold rounded-xl">Open Login / Role Switcher</button>
+                    </div>`;
+                }
+
+                const role = this.state.user.role;
+                const isAdmin = role === 'Administrator';
+                const isAgentOrOwner = role === 'Real Estate Agent' || role === 'Property Owner';
+
+                return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div class="bg-navy-900 text-white rounded-2xl p-6 sm:p-8 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <span class="px-2.5 py-0.5 rounded bg-gold-500 text-navy-950 text-xs font-bold uppercase tracking-wider">${role} Portal</span>
+                            <h1 class="font-serif text-2xl sm:text-3xl font-bold mt-2">Welcome, ${this.state.user.name}</h1>
+                            <p class="text-xs text-slate-300 mt-1">${this.state.user.email} • Session Encrypted & Active</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            ${(isAgentOrOwner || isAdmin) ? `<button onclick="app.navigate('sell')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl">+ New Listing</button>` : ''}
+                            <button onclick="app.logout()" class="px-4 py-2 bg-navy-800 hover:bg-navy-700 text-slate-200 text-xs font-semibold rounded-xl border border-navy-700">Logout</button>
+                        </div>
+                    </div>
+
+                    ${isAdmin ? this.renderAdminDashboard() : isAgentOrOwner ? this.renderAgentDashboard() : this.renderBuyerDashboard()}
+                </div>`;
+            }
+
+            renderBuyerDashboard() {
+                const favProps = this.state.favorites.map(id => this.state.properties.find(p => p.id === id)).filter(Boolean);
+                const recentProps = this.state.recentlyViewed.map(id => this.state.properties.find(p => p.id === id)).filter(Boolean);
+
+                return `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Saved Properties</p><p class="text-2xl font-bold text-navy-900 mt-1">${favProps.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Scheduled Visits</p><p class="text-2xl font-bold text-emerald-600 mt-1">${this.state.appointments.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Compare Tray</p><p class="text-2xl font-bold text-gold-600 mt-1">${this.state.compareList.length} / 4</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Messages</p><p class="text-2xl font-bold text-navy-900 mt-1">${this.state.messages.length}</p></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-8">
+                        <div>
+                            <h2 class="font-serif text-xl font-bold text-navy-900 mb-4">Saved Favorite Properties</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                ${favProps.length ? favProps.map(p => this.renderPropertyCard(p)).join('') : '<p class="text-sm text-slate-500">No favorite properties saved yet.</p>'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h2 class="font-serif text-xl font-bold text-navy-900 mb-4">Recently Viewed</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                ${recentProps.map(p => this.renderPropertyCard(p)).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+                            <h3 class="font-bold text-navy-900 text-base mb-3">Scheduled Property Visits</h3>
+                            <div class="space-y-3">
+                                ${this.state.appointments.map(a => `
+                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                                        <div class="flex justify-between font-bold text-navy-900">
+                                            <span>${a.propId}</span>
+                                            <span class="text-emerald-600">${a.status}</span>
+                                        </div>
+                                        <p class="text-slate-600 mt-1">${a.date} at ${a.time} • ${a.type}</p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">Payment: ${a.paymentStatus}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+                            <h3 class="font-bold text-navy-900 text-base mb-3">Buyer-Agent Message Thread</h3>
+                            <div class="space-y-2.5 max-h-64 overflow-y-auto custom-scrollbar">
+                                ${this.state.messages.map(m => `
+                                    <div class="p-3 bg-slate-50 rounded-xl text-xs">
+                                        <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                                            <strong class="text-navy-800">${m.sender} → ${m.recipient}</strong>
+                                            <span>${m.time}</span>
+                                        </div>
+                                        <p class="text-slate-700">${m.text}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            renderAgentDashboard() {
+                const myListings = this.state.properties;
+                const totalViews = myListings.reduce((sum, p) => sum + (p.views || 0), 0);
+
+                return `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Total Listings</p><p class="text-2xl font-bold text-navy-900 mt-1">${myListings.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Active Verified</p><p class="text-2xl font-bold text-emerald-600 mt-1">${myListings.filter(p => p.status === 'Active').length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Total Property Views</p><p class="text-2xl font-bold text-gold-600 mt-1">${totalViews.toLocaleString()}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Visit Requests</p><p class="text-2xl font-bold text-navy-900 mt-1">${this.state.appointments.length}</p></div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-navy-900">Manage Property Inventory</h3>
+                        <button onclick="app.navigate('sell')" class="px-3 py-1.5 bg-navy-900 text-white text-xs font-semibold rounded-lg">+ Add Property</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-3.5">ID</th>
+                                    <th class="p-3.5">Property</th>
+                                    <th class="p-3.5">Price</th>
+                                    <th class="p-3.5">Views</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${myListings.map(p => `
+                                    <tr>
+                                        <td class="p-3.5 font-mono">${p.id}</td>
+                                        <td class="p-3.5 font-semibold text-navy-900">${p.title}<br><span class="text-slate-400 font-normal">${p.city}, ${p.country}</span></td>
+                                        <td class="p-3.5 font-bold">${this.formatPrice(p.priceUSD, p.listingType)}</td>
+                                        <td class="p-3.5">${p.views}</td>
+                                        <td class="p-3.5"><span class="px-2 py-0.5 rounded font-semibold ${p.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${p.status}</span></td>
+                                        <td class="p-3.5 flex gap-2">
+                                            <button onclick="app.navigate('details', {id: '${p.id}'})" class="text-navy-800 hover:underline font-semibold">View</button>
+                                            <button onclick="app.deleteProperty('${p.id}')" class="text-red-600 hover:underline font-semibold">Delete</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 p-5">
+                    <h3 class="font-bold text-navy-900 mb-3">Customer Appointment Leads</h3>
+                    <div class="space-y-2">
+                        ${this.state.appointments.map(a => `
+                            <div class="p-3 bg-slate-50 rounded-xl flex flex-wrap justify-between items-center gap-3 text-xs">
+                                <div>
+                                    <p class="font-bold text-navy-900">${a.userName} • Property ${a.propId}</p>
+                                    <p class="text-slate-500">${a.date} at ${a.time} (${a.type})</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-1 rounded bg-white border font-semibold">${a.status}</span>
+                                    ${a.status !== 'Confirmed' ? `<button onclick="app.confirmAppointment('${a.id}')" class="px-3 py-1 bg-emerald-600 text-white rounded font-semibold">Confirm Visit</button>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+
+            renderAdminDashboard() {
+                const pending = this.state.properties.filter(p => p.status !== 'Active');
+
+                return `
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Total Properties</p><p class="text-2xl font-bold text-navy-900 mt-1">${this.state.properties.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Pending Approvals</p><p class="text-2xl font-bold text-amber-600 mt-1">${pending.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Verified Agents</p><p class="text-2xl font-bold text-emerald-600 mt-1">${this.state.agents.length}</p></div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200"><p class="text-xs text-slate-500">Reported Listings</p><p class="text-2xl font-bold text-red-600 mt-1">${this.state.reports.length}</p></div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-8">
+                    <div class="p-5 border-b border-slate-100">
+                        <h3 class="font-bold text-navy-900">Admin Property Moderation & Approval Queue</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="p-3.5">ID</th>
+                                    <th class="p-3.5">Title & Location</th>
+                                    <th class="p-3.5">Price</th>
+                                    <th class="p-3.5">Verification</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5">Admin Controls</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${this.state.properties.map(p => `
+                                    <tr>
+                                        <td class="p-3.5 font-mono">${p.id}</td>
+                                        <td class="p-3.5 font-semibold">${p.title} (${p.city})</td>
+                                        <td class="p-3.5">${this.formatPrice(p.priceUSD, p.listingType)}</td>
+                                        <td class="p-3.5">${p.verified ? '<span class="text-emerald-600 font-bold">Verified</span>' : '<span class="text-amber-600">Unverified</span>'}</td>
+                                        <td class="p-3.5 font-semibold">${p.status}</td>
+                                        <td class="p-3.5 flex gap-2">
+                                            ${p.status !== 'Active' ? `<button onclick="app.approveProperty('${p.id}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded font-semibold">Approve & Verify</button>` : ''}
+                                            <button onclick="app.deleteProperty('${p.id}')" class="px-2.5 py-1 bg-red-50 text-red-600 rounded font-semibold">Remove</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                ${this.state.reports.length ? `
+                <div class="bg-red-50 border border-red-200 rounded-2xl p-5">
+                    <h3 class="font-bold text-red-900 mb-2">Flagged / Reported Listings</h3>
+                    ${this.state.reports.map(r => `<p class="text-xs text-red-800">• <strong>${r.propId}</strong> (${r.date}): ${r.reason}</p>`).join('')}
+                </div>` : ''}`;
+            }
+
+            approveProperty(propId) {
+                const prop = this.state.properties.find(p => p.id === propId);
+                if (prop) {
+                    prop.status = 'Active';
+                    prop.verified = true;
+                    this.saveState();
+                    this.showToast(`Property ${propId} approved and marked Verified!`);
+                    this.render();
+                }
+            }
+
+            deleteProperty(propId) {
+                if (confirm(`Are you sure you want to permanently remove listing ${propId}?`)) {
+                    this.state.properties = this.state.properties.filter(p => p.id !== propId);
+                    this.saveState();
+                    this.showToast(`Listing ${propId} removed from database.`);
+                    this.render();
+                }
+            }
+
+            confirmAppointment(aptId) {
+                const apt = this.state.appointments.find(a => a.id === aptId);
+                if (apt) {
+                    apt.status = 'Confirmed';
+                    this.saveState();
+                    this.showToast(`Appointment ${aptId} confirmed! Buyer notified.`);
+                    this.render();
+                }
+            }
+
+            // 7. AGENTS DIRECTORY, ABOUT US & CONTACT PAGES
+            renderAgents() {
+                return `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <div class="text-center max-w-2xl mx-auto mb-12">
+                        <span class="text-xs font-bold uppercase tracking-widest text-gold-600">Accredited Global Advisors</span>
+                        <h1 class="font-serif text-3xl sm:text-4xl font-bold text-navy-900 mt-1">Meet Our Verified Real Estate Agents</h1>
+                        <p class="text-sm text-slate-500 mt-2">Every ESTATEX advisor holds active regional licensing (RERA, TREC, RICS) and verified transaction history.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        ${this.state.agents.map(ag => `
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm text-center">
+                                <img src="${ag.avatar}" alt="${ag.name}" class="w-24 h-24 rounded-full object-cover mx-auto border-4 border-gold-500/30 mb-4">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <h3 class="font-bold text-lg text-navy-900">${ag.name}</h3>
+                                    <i data-lucide="badge-check" class="w-5 h-5 text-emerald-600"></i>
+                                </div>
+                                <p class="text-xs font-semibold text-gold-600 mt-0.5">${ag.title}</p>
+                                <p class="text-xs text-slate-500 mt-2">${ag.region}</p>
+                                <div class="my-4 py-3 bg-slate-50 rounded-xl text-xs space-y-1">
+                                    <p><strong>License:</strong> ${ag.license}</p>
+                                    <p><strong>Closed Transactions:</strong> ${ag.dealsClosed} • <strong>Rating:</strong> ★ ${ag.rating}/5.0</p>
+                                </div>
+                                <button onclick="app.showToast('Inquiry channel opened with ${ag.name}')" class="w-full py-2.5 bg-navy-900 hover:bg-navy-800 text-white text-xs font-bold rounded-xl transition">Consult with ${ag.name.split(' ')[0]}</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+
+            renderAbout() {
+                return `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-8">
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-widest text-gold-600">About ESTATEX</span>
+                        <h1 class="font-serif text-3xl sm:text-4xl font-bold text-navy-900 mt-1">Find Your Place. Build Your Future.</h1>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">ESTATEX is a global real-estate technology marketplace designed to bring institutional-grade transparency, verified property coordinates, and seamless cross-border discovery to residential and commercial real estate across India, the Middle East, Europe, and North America.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200"><h3 class="font-bold text-navy-900">100% Coordinate Accuracy</h3><p class="text-xs text-slate-500 mt-1">Geocoded mapping with verified proximity to schools, hospitals, and transit.</p></div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200"><h3 class="font-bold text-navy-900">Multi-Currency Engine</h3><p class="text-xs text-slate-500 mt-1">Instant conversion across USD, INR (Lakhs/Crores), EUR, and AED.</p></div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200"><h3 class="font-bold text-navy-900">Privacy-First Architecture</h3><p class="text-xs text-slate-500 mt-1">Role-based access control and masked contact channels protect user security.</p></div>
+                    </div>
+                </div>`;
+            }
+
+            renderContact() {
+                return `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+                    <h1 class="font-serif text-3xl font-bold text-navy-900 mb-2">Contact Global Desk</h1>
+                    <p class="text-sm text-slate-500 mb-8">Have questions about listing verification, enterprise agency onboarding, or international investments?</p>
+                    <form onsubmit="event.preventDefault(); app.showToast('Support ticket created! Our team will respond within 2 hours.'); this.reset();" class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <input type="text" required placeholder="Full Name" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm">
+                            <input type="email" required placeholder="Email Address" class="border border-slate-300 rounded-xl px-4 py-2.5 text-sm">
+                        </div>
+                        <select class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm">
+                            <option>Property Buying / Renting Support</option>
+                            <option>Agent / Developer Onboarding</option>
+                            <option>Legal & Document Verification Query</option>
+                        </select>
+                        <textarea rows="4" required placeholder="How can our global real-estate specialists assist you?" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm"></textarea>
+                        <button type="submit" class="px-6 py-3 bg-navy-900 text-white font-bold rounded-xl text-sm">Send Message</button>
+                    </form>
+                </div>`;
+            }
+
+            // 8. AI REAL-ESTATE ASSISTANT ENGINE
+            toggleAIChat() {
+                document.getElementById('aiChatWindow').classList.toggle('hidden');
+            }
+            sendAIPrompt(text) {
+                document.getElementById('aiChatInput').value = text;
+                this.handleAIChatSubmit(new Event('submit'));
+            }
+            handleAIChatSubmit(e) {
+                e.preventDefault();
+                const input = document.getElementById('aiChatInput');
+                const query = input.value.trim();
+                if (!query) return;
+                input.value = '';
+
+                const box = document.getElementById('aiChatMessages');
+                box.innerHTML += `<div class="ml-auto max-w-[85%] bg-navy-900 text-white p-3 rounded-xl rounded-tr-none">${query}</div>`;
+
+                const q = query.toLowerCase();
+                let matches = this.state.properties.filter(p => p.status === 'Active');
+
+                if (q.includes('bengaluru') || q.includes('bangalore')) matches = matches.filter(p => p.city.toLowerCase().includes('bengaluru'));
+                else if (q.includes('dubai')) matches = matches.filter(p => p.city.toLowerCase().includes('dubai'));
+                else if (q.includes('mumbai')) matches = matches.filter(p => p.city.toLowerCase().includes('mumbai'));
+                else if (q.includes('london')) matches = matches.filter(p => p.city.toLowerCase().includes('london'));
+                else if (q.includes('villa')) matches = matches.filter(p => p.category === 'Villas');
+                else if (q.includes('apartment')) matches = matches.filter(p => p.category === 'Apartments');
+                else if (q.includes('rent')) matches = matches.filter(p => p.listingType === 'Rent');
+
+                if (q.includes('1.5m') || q.includes('under')) {
+                    matches = matches.filter(p => p.priceUSD <= 1500000);
+                }
+
+                let replyHtml = '';
+                if (matches.length > 0) {
+                    const top = matches.slice(0, 2);
+                    replyHtml = `Based on our live database, here are ${top.length} matching records:<div class="mt-2 space-y-2">` +
+                        top.map(p => `
+                            <div onclick="app.navigate('details', {id: '${p.id}'})" class="p-2 bg-slate-50 hover:bg-amber-50 border border-slate-200 rounded-lg cursor-pointer">
+                                <p class="font-bold text-navy-900 text-xs">${p.title}</p>
+                                <p class="text-[11px] text-slate-600">${p.city} • Est. ${this.formatPrice(p.priceUSD, p.listingType)} (${p.sizeSqFt} ft²)</p>
+                            </div>
+                        `).join('') +
+                        `</div><p class="text-[10px] text-slate-400 mt-1.5">*Prices shown are listing estimates and not formal valuations.</p>`;
+                } else {
+                    replyHtml = `I couldn't find an exact match in the current inventory for "${query}". Try searching for Bengaluru, Dubai, Mumbai, London, or Villas.`;
+                }
+
+                setTimeout(() => {
+                    box.innerHTML += `<div class="bg-white p-3 rounded-xl rounded-tl-none shadow-sm border border-slate-100 text-slate-700">${replyHtml}</div>`;
+                    box.scrollTop = box.scrollHeight;
+                }, 250);
+            }
+
+            // LEAFLET GEOCODED MAP INITIALIZER
+            initMaps() {
+                if (typeof L === 'undefined') return;
+
+                if (this.state.currentPage === 'details') {
+                    const mapEl = document.getElementById('propertyDetailMap');
+                    const prop = this.state.properties.find(p => p.id === this.state.selectedPropertyId) || this.state.properties[0];
+                    if (mapEl && prop) {
+                        const map = L.map(mapEl).setView([prop.lat, prop.lng], 14);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                        L.marker([prop.lat, prop.lng]).addTo(map)
+                            .bindPopup(`<strong>${prop.title}</strong><br>${prop.locality}, ${prop.city}`)
+                            .openPopup();
+                    }
+                }
+
+                if (this.state.currentPage === 'search' && this.state.filters.viewMode === 'map') {
+                    const mapEl = document.getElementById('searchResultsMap');
+                    const results = this.getFilteredProperties();
+                    if (mapEl && results.length) {
+                        const map = L.map(mapEl).setView([20.0, 45.0], 2);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap contributors'
+                        }).addTo(map);
+                        const bounds = [];
+                        results.forEach(p => {
+                            bounds.push([p.lat, p.lng]);
+                            L.marker([p.lat, p.lng]).addTo(map)
+                                .bindPopup(`<strong>${p.title}</strong><br>${this.formatPrice(p.priceUSD, p.listingType)}<br><a href="#" onclick="app.navigate('details', {id: '${p.id}'}); return false;">View Property →</a>`);
+                        });
+                        if (bounds.length === 1) map.setView(bounds[0], 13);
+                        else if (bounds.length > 1) map.fitBounds(bounds, { padding: [40, 40] });
+                    }
+                }
+            }
+
+            // MASTER RENDER LOOP
+            render() {
+                const viewport = document.getElementById('mainViewport');
+                switch (this.state.currentPage) {
+                    case 'search': viewport.innerHTML = this.renderSearch(); break;
+                    case 'details': viewport.innerHTML = this.renderDetails(); break;
+                    case 'compare': viewport.innerHTML = this.renderCompare(); break;
+                    case 'sell': viewport.innerHTML = this.renderSell(); break;
+                    case 'dashboard': viewport.innerHTML = this.renderDashboard(); break;
+                    case 'agents': viewport.innerHTML = this.renderAgents(); break;
+                    case 'about': viewport.innerHTML = this.renderAbout(); break;
+                    case 'contact': viewport.innerHTML = this.renderContact(); break;
+                    default: viewport.innerHTML = this.renderHome();
+                }
+                lucide.createIcons();
+                setTimeout(() => this.initMaps(), 50);
+            }
+        }
+
+        const app = new EstatexApp();
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
